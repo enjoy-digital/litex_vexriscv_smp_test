@@ -31,7 +31,7 @@ GCC_FLAGS = {
 
 class Open(Signal): pass
 
-class VexRiscvSMP(CPU, AutoCSR):
+class VexRiscvSMP(CPU):
     name                 = "vexriscv"
     data_width           = 32
     endianness           = "little"
@@ -137,6 +137,9 @@ class VexRiscvSMP(CPU, AutoCSR):
             i_io_clint_DAT_MOSI = cbus.dat_w,
         )
 
+        # Add verilog sources
+        self.add_sources(platform, variant)
+
     def set_reset_address(self, reset_address):
         assert not hasattr(self, "reset_address")
         self.reset_address = reset_address
@@ -144,7 +147,9 @@ class VexRiscvSMP(CPU, AutoCSR):
 
     @staticmethod
     def add_sources(platform, variant="standard"):
-        platform.add_source(os.path.join("verilog", "VexRiscvLitexSmpCluster.v"))
+        vdir = os.path.join(os.path.dirname(__file__), "verilog")
+        platform.add_source_dir(vdir)
+        platform.add_verilog_include_path(vdir)
 
     def do_finalize(self):
         assert hasattr(self, "reset_address")
