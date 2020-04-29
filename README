@@ -1,0 +1,6 @@
+[> Getting started
+------------------
+1. Install LiteX: https://github.com/enjoy-digital/litex/wiki/Installation
+
+2. Run the simulation:
+  ./sim.py (--trace to enable waveform that will be located in build/gateware/dut.vcd)
