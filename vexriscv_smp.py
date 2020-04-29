@@ -26,7 +26,7 @@ GCC_FLAGS = {
     #                               ||||/--- Single-Precision Floating-Point
     #                               |||||/-- Double-Precision Floating-Point
     #                               imacfd
-    "standard":         "-march=rv32imac     -mabi=ilp32",
+    "standard":         "-march=rv32ima     -mabi=ilp32",
 }
 
 class Open(Signal): pass
@@ -64,7 +64,7 @@ class VexRiscvSMP(CPU):
         self.pbus             = pbus = wishbone.Interface()
         self.ibus             = ibus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
         self.dbus             = dbus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
-        self.cbus             = cbus = wishbone.Interface() # FIXME: add as slave.
+        self.cbus             = cbus = wishbone.Interface()
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [dbus, cbus]
