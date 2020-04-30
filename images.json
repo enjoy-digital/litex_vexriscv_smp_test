@@ -1,0 +1,6 @@
+{
+	"images/fw_jump.bin": "0x00f00000",
+	"images/Image":       "0x00000000",
+	"images/dtb":         "0x00ef0000",
+	"images/rootfs.cpio": "0x01000000"
+}
