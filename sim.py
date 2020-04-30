@@ -59,9 +59,14 @@ class SoCSMP(SoCCore):
         platform     = Platform()
         sys_clk_freq = int(1e6)
 
-        ram_init = []
+        sdram_init = []
         if init_memories:
-            ram_init = [] # FIXME
+            sdram_init = get_mem_data({
+                "images/fw_jump.bin": "0x00f00000",
+                "images/Image":       "0x00000000",
+                "images/dtb":         "0x00ef0000",
+                "images/rootfs.cpio": "0x01000000",
+                }, "little")
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq,
@@ -91,21 +96,21 @@ class SoCSMP(SoCCore):
             settings  = phy_settings,
             clk_freq  = 100e6,
             verbosity = sdram_verbosity,
-            init      = ram_init)
+            init      = sdram_init)
         self.add_sdram("sdram",
             phy                     = self.sdrphy,
             module                  = MT41K128M16(100e6, "1:4"),
             origin                  = self.mem_map["main_ram"]
         )
-        # FIXME: skip memtest to avoid corrupting memory
-        self.add_constant("MEMTEST_BUS_SIZE",  0)
-        self.add_constant("MEMTEST_ADDR_SIZE", 0)
-        self.add_constant("MEMTEST_DATA_SIZE", 0)
+        self.add_constant("MEMTEST_BUS_SIZE",  0) # Skip test if memory is initialized to avoid
+        self.add_constant("MEMTEST_ADDR_SIZE", 0) # corrumpting the content.
+        self.add_constant("MEMTEST_DATA_SIZE", 4096 if not init_memories else 0)
 
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
+    parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
     parser.add_argument("--sdram-verbosity",      default=0,               help="Set SDRAM checker verbosity")
     parser.add_argument("--trace",                action="store_true",     help="enable VCD tracing")
     parser.add_argument("--trace-start",          default=0,               help="cycle to start VCD tracing")
@@ -120,7 +125,7 @@ def main():
     os.system("cp verilog/*.bin build/gateware/")
 
     for i in range(2):
-        soc = SoCSMP(i!=0, sdram_verbosity=int(args.sdram_verbosity))
+        soc = SoCSMP(args.sdram_init and i!=0, sdram_verbosity=int(args.sdram_verbosity))
         builder = Builder(soc, output_dir="build",
             compile_gateware = i!=0,
             csr_json         = "build/csr.json")
