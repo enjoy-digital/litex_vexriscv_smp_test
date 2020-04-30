@@ -105,6 +105,8 @@ class SoCSMP(SoCCore):
         self.add_constant("MEMTEST_BUS_SIZE",  0) # Skip test if memory is initialized to avoid
         self.add_constant("MEMTEST_ADDR_SIZE", 0) # corrumpting the content.
         self.add_constant("MEMTEST_DATA_SIZE", 4096 if not init_memories else 0)
+        if init_memories:
+            self.add_constant("ROM_BOOT_ADDRESS", 0x40f00000) # Jump to fw_jump.bin
 
 # Build --------------------------------------------------------------------------------------------
 
