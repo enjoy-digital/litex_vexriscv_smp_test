@@ -67,7 +67,7 @@ class VexRiscvSMP(CPU):
         self.cbus             = cbus = wishbone.Interface()
 
         self.periph_buses     = [pbus]
-        self.memory_buses     = [dbus, ibus, cbus]
+        self.memory_buses     = [ibus, dbus]
 
         # # #
 
