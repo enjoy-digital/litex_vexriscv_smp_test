@@ -77,7 +77,7 @@ class SoCSMP(SoCCore):
         self.add_constant("SIM")
 
         # CLINT ------------------------------------------------------------------------------------
-        self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(size=0x10000, cached=False))
+        self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(origin=0xf0010000, size=0x10000, cached=False))
 
         # Supervisor -------------------------------------------------------------------------------
         self.submodules.supervisor = Supervisor()
