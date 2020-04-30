@@ -20,6 +20,8 @@ from litedram.phy import s7ddrphy
 
 from liteeth.phy.mii import LiteEthPHYMII
 
+from vexriscv_smp import VexRiscvSMP
+
 # CRG ----------------------------------------------------------------------------------------------
 
 class _CRG(Module):
@@ -54,14 +56,14 @@ class BaseSoC(SoCCore):
         platform = arty.Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
-        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, **kwargs)
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
         self.submodules.crg = _CRG(platform, sys_clk_freq)
 
         # DDR3 SDRAM -------------------------------------------------------------------------------
         if not self.integrated_main_ram_size:
-            self.submodules.ddrphy = s7ddrphy.A7DDRPHY(platform.request("ddram")
+            self.submodules.ddrphy = s7ddrphy.A7DDRPHY(platform.request("ddram"),
                 memtype        = "DDR3",
                 nphases        = 4,
                 sys_clk_freq   = sys_clk_freq,
@@ -93,13 +95,22 @@ class BaseSoC(SoCCore):
             self.add_csr("ethphy")
             self.add_etherbone(phy=self.ethphy)
 
+# Load ---------------------------------------------------------------------------------------------
+
+def load():
+    from litex.build.xilinx import VivadoProgrammer
+    prog = VivadoProgrammer()
+    prog.load_bitstream("soc_basesoc_arty/gateware/top.bit")
+    exit()
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Arty")
     builder_args(parser)
     soc_sdram_args(parser)
-    vivado_build_args(parser)
+    parser.add_argument("--build", action="store_true", help="build bitstream")
+    parser.add_argument("--load",  action="store_true", help="load bitstream (to SRAM)")
     parser.add_argument("--with-ethernet", action="store_true", help="enable Ethernet support")
     parser.add_argument("--with-etherbone", action="store_true", help="enable Etherbone support")
     args = parser.parse_args()
@@ -108,8 +119,10 @@ def main():
     soc = BaseSoC(with_ethernet=args.with_ethernet, with_etherbone=args.with_etherbone,
         **soc_sdram_argdict(args))
     builder = Builder(soc, **builder_argdict(args))
-    builder.build(**vivado_build_argdict(args))
+    builder.build(run=args.build)
 
+    if args.load:
+        load()
 
 if __name__ == "__main__":
     main()
