@@ -6,5 +6,5 @@
   ./sim.py (--trace to enable waveform that will be located in build/gateware/dut.vcd)
 
 3. Test on Hardware (Arty A7):
-  ./arty.py --build --load
+  ./arty.py --uart-baudrate=1000000 --build --load
   lxterm --images=images.json /dev/ttyUSBX --speed=1e6 --no-crc
