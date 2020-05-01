@@ -19,14 +19,14 @@ CPU_VARIANTS = {
 
 
 GCC_FLAGS = {
-    #                               /-------- Base ISA
-    #                               |/------- Hardware Multiply + Divide
-    #                               ||/----- Atomics
-    #                               |||/---- Compressed ISA
-    #                               ||||/--- Single-Precision Floating-Point
-    #                               |||||/-- Double-Precision Floating-Point
-    #                               imacfd
-    "standard":         "-march=rv32ima     -mabi=ilp32",
+    #                       /-------- Base ISA
+    #                       |/------- Hardware Multiply + Divide
+    #                       ||/----- Atomics
+    #                       |||/---- Compressed ISA
+    #                       ||||/--- Single-Precision Floating-Point
+    #                       |||||/-- Double-Precision Floating-Point
+    #                       imacfd
+    "standard": "-march=rv32ima     -mabi=ilp32",
 }
 
 class Open(Signal): pass
@@ -147,7 +147,7 @@ class VexRiscvSMP(CPU):
 
     @staticmethod
     def add_sources(platform, variant="standard"):
-        vdir = os.path.join(os.path.dirname(__file__), "verilog")
+        vdir = os.path.join(os.path.dirname(__file__), "..", "verilog")
         platform.add_source_dir(vdir)
         platform.add_verilog_include_path(vdir)
 
