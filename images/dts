@@ -10,7 +10,7 @@
 	chosen {
 		bootargs = "mem=128M@0x40000000 rootwait console=hvc0 root=/dev/ram0 init=/sbin/init";
 		linux,initrd-start = <0x41000000>;
-		linux,initrd-end = <0x41800000>; // max 8MB ramdisk image
+		linux,initrd-end   = <0x41800000>; // max 8MB ramdisk image
 	};
 
     cpus {
@@ -20,7 +20,7 @@
         cpu@0 {
             device_type = "cpu";
             compatible = "riscv";
-            riscv,isa = "rv32im";
+            riscv,isa = "rv32ima";
             mmu-type = "riscv,sv32";
             reg = <0>;
             status = "okay";
@@ -31,10 +31,10 @@
             };
         };
 
-        /*cpu@1 {
+        cpu@1 {
             device_type = "cpu";
             compatible = "riscv";
-            riscv,isa = "rv32im";
+            riscv,isa = "rv32ima";
             mmu-type = "riscv,sv32";
             reg = <1>;
             status = "okay";
@@ -48,7 +48,7 @@
         cpu@2 {
             device_type = "cpu";
             compatible = "riscv";
-            riscv,isa = "rv32im";
+            riscv,isa = "rv32ima";
             mmu-type = "riscv,sv32";
             reg = <2>;
             status = "okay";
@@ -62,7 +62,7 @@
         cpu@3 {
             device_type = "cpu";
             compatible = "riscv";
-            riscv,isa = "rv32im";
+            riscv,isa = "rv32ima";
             mmu-type = "riscv,sv32";
             reg = <3>;
             status = "okay";
@@ -71,7 +71,7 @@
                 interrupt-controller;
                 compatible = "riscv,cpu-intc";
             };
-        };*/
+        };
 	};
 
 	memory@40000000 {
