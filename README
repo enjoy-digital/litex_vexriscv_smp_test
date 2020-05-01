@@ -3,7 +3,7 @@
 1. Install LiteX: https://github.com/enjoy-digital/litex/wiki/Installation
 
 2. Run the simulation:
-  ./sim.py (--trace to enable waveform that will be located in build/gateware/dut.vcd)
+  ./sim.py (--sdram-init to load the images) (--trace to enable waveform that will be located in build/gateware/dut.vcd)
 
 3. Test on Hardware (Arty A7):
   ./arty.py --uart-baudrate=1000000 --build --load
