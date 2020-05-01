@@ -20,7 +20,7 @@ smp_target:
 	beqz a0, smp_target
 	fence r, rw
 
-	//.word(0x100F) //i$ flush
+	.word(0x100F) //i$ flush
 	lw x10, smp_lottery_args
 	lw x11, smp_lottery_args+4
 	lw x12, smp_lottery_args+8

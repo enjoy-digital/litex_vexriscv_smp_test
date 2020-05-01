@@ -83,13 +83,7 @@ lottery:
   li a1, 1
   amoadd.w a0, a1, (a0)
   beqz a0, lottery_master
-  
-lottery_wait:
-  lw a0, smp_lottery_lock
-  beqz a0, lottery_wait
-  fence r, r
-  lw a0, smp_lottery_target 
-  jalr a0
+  call smp_target
 
 lottery_master:
   call lottery_delay //Ensure that all cpu had time to do the lottery before BSS clear happen
