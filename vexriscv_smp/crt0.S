@@ -5,7 +5,7 @@
 .global smp_lottery_target
 .global smp_lottery_lock
 .global smp_lottery_args
-.global smp_target
+.global smp_slave
 
 _start:
   j crt_init
@@ -56,37 +56,18 @@ trap_entry:
   addi sp,sp,16*4
   mret
   .text
-
-
-lottery_delay:
-  li a0, 2000
-lottery_delay_loop:
-  addi a0, a0, -1
-  bnez a0, lottery_delay_loop
-  ret
   
 crt_init:
   la sp, _fstack + 4
   la a0, trap_entry
   csrw mtvec, a0
-
-.global  smp_lottery_value
-.global  smp_lottery_lock
-
-lottery_init:
   sw x0, smp_lottery_lock, a1
-  sw x0, smp_lottery_value, a1
-  call lottery_delay //Ensure that all CPU had time to boot 
   
-lottery:
-  la a0, smp_lottery_value
-  li a1, 1
-  amoadd.w a0, a1, (a0)
-  beqz a0, lottery_master
-  call smp_target
+smp_tyranny:
+  csrr a0, mhartid
+  beqz a0, bss_init
+  call smp_slave
 
-lottery_master:
-  call lottery_delay //Ensure that all cpu had time to do the lottery before BSS clear happen
 
 bss_init:
   la a0, _fbss
@@ -109,8 +90,6 @@ infinit_loop:
 
 //Initialized to avoid having them set to zero by BSS clear
 .bss
-  smp_lottery_stable: .word 0; .word 0
-  smp_lottery_value:  .word 0
   smp_lottery_target: .word 0
   smp_lottery_args:   .word 0; .word 0; .word 0
   smp_lottery_lock:   .word 0
