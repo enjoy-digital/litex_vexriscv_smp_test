@@ -122,7 +122,6 @@ proc fpga_program {} {
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Arty")
-    builder_args(parser)
     soc_sdram_args(parser)
     parser.add_argument("--build", action="store_true", help="build bitstream")
     parser.add_argument("--load",  action="store_true", help="load bitstream (to SRAM)")
@@ -130,7 +129,7 @@ def main():
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
-    builder = Builder(soc, **builder_argdict(args))
+    builder = Builder(soc, compile_software=args.build)
     builder.build(run=args.build)
 
     if args.load:
