@@ -94,10 +94,29 @@ class BaseSoC(SoCCore):
 # Load ---------------------------------------------------------------------------------------------
 
 def load():
-    from litex.build.xilinx import VivadoProgrammer
-    prog = VivadoProgrammer()
+    import os
+    f = open("openocd.cfg", "w")
+    f.write(
+"""
+interface ftdi
+ftdi_vid_pid 0x0403 0x6010
+ftdi_channel 0
+ftdi_layout_init 0x00e8 0x60eb
+reset_config none
+
+source [find cpld/xilinx-xc7.cfg]
+source [find cpld/jtagspi.cfg]
+adapter_khz 25000
+
+proc fpga_program {} {
+    global _CHIPNAME
+    xc7_program $_CHIPNAME.tap
+}
+""")
+    f.close()
+    from litex.build.openocd import OpenOCD
+    prog = OpenOCD("openocd.cfg")
     prog.load_bitstream("soc_basesoc_arty/gateware/top.bit")
-    exit()
 
 # Build --------------------------------------------------------------------------------------------
 
