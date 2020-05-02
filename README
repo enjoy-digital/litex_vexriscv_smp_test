@@ -7,4 +7,4 @@
 
 3. Test on Hardware (Arty A7):
   ./arty.py --uart-baudrate=1000000 --build --load
-  lxterm --images=images.json /dev/ttyUSBX --speed=1e6 --no-crc
+  lxterm --images=images.json /dev/ttyUSBX --speed=1000000 --no-crc
