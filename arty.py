@@ -53,7 +53,7 @@ class _CRG(Module):
 # BaseSoC ------------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, with_etherbone=False, **kwargs):
+    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, **kwargs):
         platform = arty.Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
@@ -91,14 +91,6 @@ class BaseSoC(SoCCore):
             self.add_csr("ethphy")
             self.add_ethernet(phy=self.ethphy)
 
-        # Etherbone --------------------------------------------------------------------------------
-        if with_etherbone:
-            self.submodules.ethphy = LiteEthPHYMII(
-                clock_pads = self.platform.request("eth_clocks"),
-                pads       = self.platform.request("eth"))
-            self.add_csr("ethphy")
-            self.add_etherbone(phy=self.ethphy)
-
 # Load ---------------------------------------------------------------------------------------------
 
 def load():
@@ -116,12 +108,9 @@ def main():
     parser.add_argument("--build", action="store_true", help="build bitstream")
     parser.add_argument("--load",  action="store_true", help="load bitstream (to SRAM)")
     parser.add_argument("--with-ethernet", action="store_true", help="enable Ethernet support")
-    parser.add_argument("--with-etherbone", action="store_true", help="enable Etherbone support")
     args = parser.parse_args()
 
-    assert not (args.with_ethernet and args.with_etherbone)
-    soc = BaseSoC(with_ethernet=args.with_ethernet, with_etherbone=args.with_etherbone,
-        **soc_sdram_argdict(args))
+    soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
     builder = Builder(soc, **builder_argdict(args))
     builder.build(run=args.build)
 
