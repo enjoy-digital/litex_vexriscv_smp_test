@@ -3,12 +3,12 @@
 # This file is Copyright (c) 2015-2019 Florent Kermarrec <florent@enjoy-digital.fr>
 # License: BSD
 
+import os
 import argparse
 
 from migen import *
 
 from litex_boards.platforms import arty
-from litex.build.xilinx.vivado import vivado_build_args, vivado_build_argdict
 
 from litex.soc.cores.clock import *
 from litex.soc.integration.soc import SoCRegion
@@ -91,33 +91,6 @@ class BaseSoC(SoCCore):
             self.add_csr("ethphy")
             self.add_ethernet(phy=self.ethphy)
 
-# Load ---------------------------------------------------------------------------------------------
-
-def load():
-    import os
-    f = open("openocd.cfg", "w")
-    f.write(
-"""
-interface ftdi
-ftdi_vid_pid 0x0403 0x6010
-ftdi_channel 0
-ftdi_layout_init 0x00e8 0x60eb
-reset_config none
-
-source [find cpld/xilinx-xc7.cfg]
-source [find cpld/jtagspi.cfg]
-adapter_khz 25000
-
-proc fpga_program {} {
-    global _CHIPNAME
-    xc7_program $_CHIPNAME.tap
-}
-""")
-    f.close()
-    from litex.build.openocd import OpenOCD
-    prog = OpenOCD("openocd.cfg")
-    prog.load_bitstream("soc_basesoc_arty/gateware/top.bit")
-
 # Build --------------------------------------------------------------------------------------------
 
 def main():
@@ -133,7 +106,8 @@ def main():
     builder.build(run=args.build)
 
     if args.load:
-        load()
+        prog = soc.platform.create_programmer()
+        prog.load_bitstream(os.path.join(builder.gateware_dir, "top.bit"))
 
 if __name__ == "__main__":
     main()
