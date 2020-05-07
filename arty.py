@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # This file is Copyright (c) 2015-2019 Florent Kermarrec <florent@enjoy-digital.fr>
+# This file is Copyright (c) 2020 Dolu1990 <charles.papon.90@gmail.com>
 # License: BSD
 
 import os
