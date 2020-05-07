@@ -53,7 +53,7 @@ class _CRG(Module):
 # BaseSoC ------------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, **kwargs):
+    def __init__(self, sys_clk_freq=int(125e6), with_ethernet=False, **kwargs):
         platform = arty.Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
