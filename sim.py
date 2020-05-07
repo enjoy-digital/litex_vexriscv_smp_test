@@ -8,11 +8,9 @@ from litex.build.generic_platform import *
 from litex.build.sim import SimPlatform
 from litex.build.sim.config import SimConfig
 
-from litex.soc.interconnect.csr import *
 from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
-from litex.soc.interconnect import wishbone
 
 from litedram.modules import MT41K128M16
 from litedram.phy.model import SDRAMPHYModel
@@ -42,20 +40,11 @@ class Platform(SimPlatform):
     def __init__(self):
         SimPlatform.__init__(self, "SIM", _io)
 
-# Supervisor ---------------------------------------------------------------------------------------
-
-class Supervisor(Module, AutoCSR):
-    def __init__(self):
-        self._finish  = CSR()  # controlled from CPU
-        self.finish = Signal() # controlled from logic
-        self.sync += If(self._finish.re | self.finish, Finish())
-
 # SoCSMP -------------------------------------------------------------------------------------------
 
 class SoCSMP(SoCCore):
     def __init__(self,
-        init_memories    = False,
-        sdram_verbosity  = 0):
+        init_memories    = False):
         platform     = Platform()
         sys_clk_freq = int(1e6)
 
@@ -79,10 +68,6 @@ class SoCSMP(SoCCore):
         # CLINT ------------------------------------------------------------------------------------
         self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(origin=0xf0010000, size=0x10000, cached=False))
 
-        # Supervisor -------------------------------------------------------------------------------
-        self.submodules.supervisor = Supervisor()
-        self.add_csr("supervisor")
-
         # CRG --------------------------------------------------------------------------------------
         self.submodules.crg = CRG(platform.request("sys_clk"))
 
@@ -95,29 +80,31 @@ class SoCSMP(SoCCore):
             module    = MT41K128M16(100e6, "1:4"),
             settings  = phy_settings,
             clk_freq  = 100e6,
-            verbosity = sdram_verbosity,
             init      = sdram_init)
         self.add_sdram("sdram",
             phy                     = self.sdrphy,
             module                  = MT41K128M16(100e6, "1:4"),
             origin                  = self.mem_map["main_ram"]
         )
-        self.add_constant("MEMTEST_BUS_SIZE",  0) # Skip test if memory is initialized to avoid
-        self.add_constant("MEMTEST_ADDR_SIZE", 0) # corrumpting the content.
-        self.add_constant("MEMTEST_DATA_SIZE", 4096 if not init_memories else 0)
         if init_memories:
+            self.add_constant("MEMTEST_BUS_SIZE",  0) # Skip test if memory is initialized to avoid
+            self.add_constant("MEMTEST_ADDR_SIZE", 0) # corrumpting the content.
+            self.add_constant("MEMTEST_DATA_SIZE", 0)
             self.add_constant("ROM_BOOT_ADDRESS", 0x40f00000) # Jump to fw_jump.bin
+        else:
+            self.add_constant("MEMTEST_BUS_SIZE",  4096)
+            self.add_constant("MEMTEST_ADDR_SIZE", 4096)
+            self.add_constant("MEMTEST_DATA_SIZE", 4096)
 
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
     parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
-    parser.add_argument("--sdram-verbosity",      default=0,               help="Set SDRAM checker verbosity")
-    parser.add_argument("--trace",                action="store_true",     help="enable VCD tracing")
-    parser.add_argument("--trace-start",          default=0,               help="cycle to start VCD tracing")
-    parser.add_argument("--trace-end",            default=-1,              help="cycle to end VCD tracing")
-    parser.add_argument("--opt-level",            default="O0",            help="compilation optimization level")
+    parser.add_argument("--trace",                action="store_true",     help="Enable VCD tracing")
+    parser.add_argument("--trace-start",          default=0,               help="Cycle to start VCD tracing")
+    parser.add_argument("--trace-end",            default=-1,              help="Cycle to end VCD tracing")
+    parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
     args = parser.parse_args()
 
     sim_config = SimConfig(default_clk="sys_clk")
@@ -127,7 +114,7 @@ def main():
     os.system("cp verilog/*.bin build/gateware/")
 
     for i in range(2):
-        soc = SoCSMP(args.sdram_init and i!=0, sdram_verbosity=int(args.sdram_verbosity))
+        soc = SoCSMP(args.sdram_init and i!=0)
         builder = Builder(soc, output_dir="build",
             compile_gateware = i!=0,
             csr_json         = "build/csr.json")
