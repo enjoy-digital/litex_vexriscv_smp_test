@@ -19,6 +19,7 @@ from litex.soc.integration.builder import *
 
 from litedram.modules import MT41K128M16
 from litedram.phy import s7ddrphy
+from litedram.core.controller import ControllerSettings
 
 from liteeth.phy.mii import LiteEthPHYMII
 
@@ -29,7 +30,6 @@ from vexriscv_smp import VexRiscvSMP
 class _CRG(Module):
     def __init__(self, platform, sys_clk_freq):
         self.clock_domains.cd_sys       = ClockDomain()
-        self.clock_domains.cd_sys2x     = ClockDomain(reset_less=True)
         self.clock_domains.cd_sys4x     = ClockDomain(reset_less=True)
         self.clock_domains.cd_sys4x_dqs = ClockDomain(reset_less=True)
         self.clock_domains.cd_clk200    = ClockDomain()
@@ -41,7 +41,6 @@ class _CRG(Module):
         self.comb += pll.reset.eq(~platform.request("cpu_reset"))
         pll.register_clkin(platform.request("clk100"), 100e6)
         pll.create_clkout(self.cd_sys,       sys_clk_freq)
-        pll.create_clkout(self.cd_sys2x,     2*sys_clk_freq)
         pll.create_clkout(self.cd_sys4x,     4*sys_clk_freq)
         pll.create_clkout(self.cd_sys4x_dqs, 4*sys_clk_freq, phase=90)
         pll.create_clkout(self.cd_clk200,    200e6)
@@ -72,7 +71,7 @@ class BaseSoC(SoCCore):
                 memtype        = "DDR3",
                 nphases        = 4,
                 sys_clk_freq   = sys_clk_freq,
-                interface_type = "MEMORY")
+                interface_type = "NETWORKING")
             self.add_csr("ddrphy")
             self.add_sdram("sdram",
                 phy                     = self.ddrphy,
@@ -81,7 +80,10 @@ class BaseSoC(SoCCore):
                 size                    = kwargs.get("max_sdram_size", 0x40000000),
                 l2_cache_size           = kwargs.get("l2_size", 8192),
                 l2_cache_min_data_width = kwargs.get("min_l2_data_width", 128),
-                l2_cache_reverse        = True
+                l2_cache_reverse        = True,
+                controller_settings     = ControllerSettings(
+                    cmd_buffer_buffered = False,
+                    with_auto_precharge = True)
             )
 
         # Ethernet ---------------------------------------------------------------------------------
