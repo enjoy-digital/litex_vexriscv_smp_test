@@ -18,6 +18,8 @@ from litex.soc.integration.builder import *
 
 from litedram.modules import MT41K128M16
 from litedram.phy.model import SDRAMPHYModel
+from litedram.core.controller import ControllerSettings
+
 from litex.tools.litex_sim import get_sdram_phy_settings
 
 from vexriscv_smp import VexRiscvSMP
@@ -88,7 +90,11 @@ class SoCSMP(SoCCore):
         self.add_sdram("sdram",
             phy                     = self.sdrphy,
             module                  = MT41K128M16(100e6, "1:4"),
-            origin                  = self.mem_map["main_ram"]
+            origin                  = self.mem_map["main_ram"],
+            controller_settings     = ControllerSettings(
+                cmd_buffer_buffered = False,
+                with_auto_precharge = True
+            )
         )
         if init_memories:
             self.add_constant("MEMTEST_BUS_SIZE",  0) # Skip test if memory is initialized to avoid
