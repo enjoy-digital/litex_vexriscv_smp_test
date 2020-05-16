@@ -83,7 +83,7 @@ class BaseSoC(SoCCore):
                 l2_cache_reverse        = True,
                 controller_settings     = ControllerSettings(
                     cmd_buffer_buffered = False,
-                    with_auto_precharge = True)
+                    with_auto_precharge = False)
             )
 
         # Ethernet ---------------------------------------------------------------------------------

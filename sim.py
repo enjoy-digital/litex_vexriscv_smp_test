@@ -93,7 +93,7 @@ class SoCSMP(SoCCore):
             origin                  = self.mem_map["main_ram"],
             controller_settings     = ControllerSettings(
                 cmd_buffer_buffered = False,
-                with_auto_precharge = True
+                with_auto_precharge = False
             )
         )
         if init_memories:
