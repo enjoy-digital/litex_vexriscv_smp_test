@@ -1,0 +1,56 @@
+/dts-v1/;
+
+/ {
+    #address-cells = <0x1>;
+    #size-cells = <0x1>;
+	compatible = "spinal,vexriscv";
+	model = "spinal,vexriscv_sim";
+
+
+	chosen {
+		bootargs = "mem=128M@0x40000000 rootwait console=hvc0 earlycon=sbi root=/dev/ram0 init=/sbin/init";
+		linux,initrd-start = <0x41000000>;
+		linux,initrd-end   = <0x41800000>; // max 8MB ramdisk image
+	};
+
+    cpus {
+        #address-cells = <0x1>;
+        #size-cells = <0x0>;
+        timebase-frequency = <100000000>;
+        cpu@0 {
+            device_type = "cpu";
+            compatible = "riscv";
+            riscv,isa = "rv32ima";
+            mmu-type = "riscv,sv32";
+            reg = <0>;
+            status = "okay";
+            L1: interrupt-controller {
+                #interrupt-cells = <0x00000001>;
+                interrupt-controller;
+                compatible = "riscv,cpu-intc";
+            };
+        };
+	};
+
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x40000000 0x08000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		opensbi: sbi@40F00000 {
+			reg = <0x40F00000 0x100000>;
+		};
+	};
+
+	soc {
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+		compatible = "spinal,vexriscv-sim";
+		ranges;
+	};
+};

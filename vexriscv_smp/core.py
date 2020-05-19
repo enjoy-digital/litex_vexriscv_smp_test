@@ -14,7 +14,10 @@ from litedram.common import LiteDRAMNativePort
 
 
 CPU_VARIANTS = {
-    "standard":         "VexRiscv",
+    "1c":         "VexRiscv",
+    "2c":         "VexRiscv",
+    "4c":         "VexRiscv",
+    "8c":         "VexRiscv",
 }
 
 
@@ -26,7 +29,10 @@ GCC_FLAGS = {
     #                       ||||/--- Single-Precision Floating-Point
     #                       |||||/-- Double-Precision Floating-Point
     #                       imacfd
-    "standard": "-march=rv32ima     -mabi=ilp32",
+    "1c":       "-march=rv32ima     -mabi=ilp32",
+    "2c":       "-march=rv32ima     -mabi=ilp32",
+    "4c":       "-march=rv32ima     -mabi=ilp32",
+    "8c":       "-march=rv32ima     -mabi=ilp32",
 }
 
 class Open(Signal): pass
@@ -58,7 +64,7 @@ class VexRiscvSMP(CPU):
         flags += " -D__vexriscv__"
         return flags
 
-    def __init__(self, platform, variant="standard"):
+    def __init__(self, platform, variant):
         assert variant in CPU_VARIANTS, "Unsupported variant %s" % variant
         self.platform         = platform
         self.variant          = variant
@@ -148,11 +154,11 @@ class VexRiscvSMP(CPU):
         assert reset_address == 0x00000000
 
     @staticmethod
-    def add_sources(platform, variant="standard"):
-        vdir = os.path.join(os.path.dirname(__file__), "..", "verilog")
-        platform.add_source_dir(vdir)
-        platform.add_verilog_include_path(vdir)
+    def add_sources(platform, variant):
+        platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "RamXilinx.v"))
+        platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "VexRiscvLitexSmpCluster_" + variant + ".v"))
+
 
     def do_finalize(self):
         assert hasattr(self, "reset_address")
-        self.specials += Instance("VexRiscvLitexSmpCluster", **self.cpu_params)
+        self.specials += Instance("VexRiscvLitexSmpCluster_" + self.variant, **self.cpu_params)

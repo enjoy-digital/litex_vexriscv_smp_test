@@ -8,6 +8,7 @@ import os
 import argparse
 
 from migen import *
+from litex.build.xilinx.vivado import vivado_build_args, vivado_build_argdict
 
 from litex_boards.platforms import nexys_video
 
@@ -94,6 +95,14 @@ class BaseSoC(SoCCore):
         #    self.add_csr("ethphy")
         #    self.add_ethernet(phy=self.ethphy)
 
+# Load ---------------------------------------------------------------------------------------------
+
+def load(builder):
+    from litex.build.xilinx import VivadoProgrammer
+    prog = VivadoProgrammer()
+    prog.load_bitstream(os.path.join(builder.gateware_dir, "top.bit"))
+    exit()
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
@@ -109,8 +118,7 @@ def main():
     builder.build(run=args.build)
 
     if args.load:
-        prog = soc.platform.create_programmer()
-        prog.load_bitstream(os.path.join(builder.gateware_dir, "top.bit"))
+        load(builder)
 
 if __name__ == "__main__":
     main()
