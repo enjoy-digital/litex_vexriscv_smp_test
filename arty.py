@@ -68,10 +68,9 @@ class BaseSoC(SoCCore):
         # DDR3 SDRAM -------------------------------------------------------------------------------
         if not self.integrated_main_ram_size:
             self.submodules.ddrphy = s7ddrphy.A7DDRPHY(platform.request("ddram"),
-                memtype        = "DDR3",
-                nphases        = 4,
-                sys_clk_freq   = sys_clk_freq,
-                interface_type = "NETWORKING")
+                memtype      = "DDR3",
+                nphases      = 4,
+                sys_clk_freq = sys_clk_freq)
             self.add_csr("ddrphy")
             self.add_sdram("sdram",
                 phy                     = self.ddrphy,
@@ -83,7 +82,7 @@ class BaseSoC(SoCCore):
                 l2_cache_reverse        = True,
                 controller_settings     = ControllerSettings(
                     cmd_buffer_buffered = False,
-                    with_auto_precharge = True)
+                    with_auto_precharge = False)
             )
 
         # Ethernet ---------------------------------------------------------------------------------
@@ -97,11 +96,12 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Arty")
+    parser = argparse.ArgumentParser(description="LiteX SoC on Nexys Video")
+    parser.add_argument("--build", action="store_true", help="Build bitstream")
+    parser.add_argument("--load",  action="store_true", help="Load bitstream")
+    builder_args(parser)
     soc_sdram_args(parser)
-    parser.add_argument("--build", action="store_true", help="build bitstream")
-    parser.add_argument("--load",  action="store_true", help="load bitstream (to SRAM)")
-    parser.add_argument("--with-ethernet", action="store_true", help="enable Ethernet support")
+    parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
