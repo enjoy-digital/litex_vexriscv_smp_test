@@ -68,6 +68,7 @@ class SoCSMP(SoCCore):
             uart_name                = "sim",
             integrated_rom_size      = 0x8000,
             integrated_main_ram_size = 0x00000000)
+        self.platform.name = "sim"
         self.add_constant("SIM")
 
         # CLINT ------------------------------------------------------------------------------------
@@ -120,20 +121,20 @@ def main():
     sim_config = SimConfig(default_clk="sys_clk")
     sim_config.add_module("serial2console", "serial")
 
-    os.makedirs("build/gateware", exist_ok=True)
-    os.system("cp verilog/*.bin build/gateware/")
-
     for i in range(2):
         soc = SoCSMP(args.cpu_variant, args.sdram_init and i!=0)
-        builder = Builder(soc, output_dir="build",
+        builder = Builder(soc,
             compile_gateware = i!=0,
-            csr_json         = "build/csr.json")
+            csr_json         = "build/sim/csr.json")
         builder.build(sim_config=sim_config,
             run         = i!=0,
             opt_level   = args.opt_level,
             trace       = args.trace,
             trace_start = int(args.trace_start),
             trace_end   = int(args.trace_end))
+        os.chdir("../")
+        if i == 0:
+            os.system("cp verilog/*.bin build/sim/gateware/")
 
 if __name__ == "__main__":
     main()
