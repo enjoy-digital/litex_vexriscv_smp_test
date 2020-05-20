@@ -2,12 +2,11 @@
 ------------------
 1. Install LiteX: https://github.com/enjoy-digital/litex/wiki/Installation
 
-2. Set how many core you want
-  export CPU_VARIANT=2c  (can be 1c, 2c, 4c, 8c)
+2. Run the simulation:
+  ./sim.py  --cpu-variant 4c (suported: 1c, 2c, 4c, 8c)
+  add --sdram-init to load the images
+  add --trace to enable waveform that will be located in build/gateware/dut.vcd
 
-3. Run the simulation:
-  ./sim.py  --cpu-variant $CPU_VARIANT (--sdram-init to load the images) (--trace to enable waveform that will be located in build/gateware/dut.vcd)
-
-4. Test on Hardware (Arty A7, up to 4c):
-  ./arty.py --cpu-variant $CPU_VARIANT --uart-baudrate=1000000 --build --load
-  lxterm --cpu-variant $CPU_VARIANT --images=images/images_$CPU_VARIANT.json /dev/ttyUSBX --speed=1000000 --no-crc
+3. Test on Hardware (Arty A7 or Nexys Video):
+  ./target.py --cpu-variant (suported: 1c, 2c, 4c, 8c) --uart-baudrate=1e6 --build --load
+  lxterm --images=images.json /dev/ttyUSBX --speed=1000000 --no-crc

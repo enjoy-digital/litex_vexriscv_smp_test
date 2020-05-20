@@ -49,9 +49,7 @@ class Platform(SimPlatform):
 # SoCSMP -------------------------------------------------------------------------------------------
 
 class SoCSMP(SoCCore):
-    def __init__(self,
-        cpu_variant,
-        init_memories    = False):
+    def __init__(self, cpu_variant, init_memories=False):
         platform     = Platform()
         sys_clk_freq = int(1e6)
 
@@ -60,7 +58,7 @@ class SoCSMP(SoCCore):
             sdram_init = get_mem_data({
                 "images/fw_jump.bin": "0x00f00000",
                 "images/Image":       "0x00000000",
-                "images/" + cpu_variant + ".dtb" :         "0x00ef0000",
+                "images/dtb"  :       "0x00ef0000",
                 "images/rootfs.cpio": "0x01000000",
                 }, "little")
 
@@ -111,12 +109,12 @@ class SoCSMP(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
+    parser.add_argument("--cpu-variant",          default="2c",            help="Select CPU netlist variant")
     parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
     parser.add_argument("--trace",                action="store_true",     help="Enable VCD tracing")
     parser.add_argument("--trace-start",          default=0,               help="Cycle to start VCD tracing")
     parser.add_argument("--trace-end",            default=-1,              help="Cycle to end VCD tracing")
     parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
-    parser.add_argument("--cpu-variant",          default="2c",            help="Select CPU netlist variant")
     args = parser.parse_args()
 
     sim_config = SimConfig(default_clk="sys_clk")

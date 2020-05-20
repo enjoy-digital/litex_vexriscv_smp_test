@@ -65,9 +65,11 @@ class VexRiscvSMP(CPU):
         return flags
 
     def __init__(self, platform, variant):
+        variant  = "2c" if variant == "standard" else variant
         assert variant in CPU_VARIANTS, "Unsupported variant %s" % variant
         self.platform         = platform
         self.variant          = variant
+        self.human_name       = self.human_name + "-" + variant.upper()
         self.reset            = Signal()
         self.pbus             = pbus = wishbone.Interface()
         self.ibus             = ibus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
@@ -76,6 +78,8 @@ class VexRiscvSMP(CPU):
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [ibus, dbus]
+
+        os.system("cp images/{}.dtb images/dtb".format(variant)) # FIXME: generate dts/dtb dynamically
 
         # # #
 
@@ -157,7 +161,6 @@ class VexRiscvSMP(CPU):
     def add_sources(platform, variant):
         platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "RamXilinx.v"))
         platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "VexRiscvLitexSmpCluster_" + variant + ".v"))
-
 
     def do_finalize(self):
         assert hasattr(self, "reset_address")

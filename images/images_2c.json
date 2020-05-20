@@ -1,6 +1,0 @@
-{
-	"images/Image":       "0x40000000",
-	"images/2c.dtb":      "0x40ef0000",
-	"images/rootfs.cpio": "0x41000000",
-	"images/fw_jump.bin": "0x40f00000"
-}
