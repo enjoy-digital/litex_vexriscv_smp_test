@@ -134,6 +134,8 @@ def main():
             trace_end   = int(args.trace_end))
         os.chdir("../")
         if i == 0:
+            os.system("./json2dts.py build/sim/csr.json > build/sim/dts") # FIXME
+            os.system("dtc -O dtb -o images/dtb build/sim/dts")           # FIXME
             os.system("cp verilog/*.bin build/sim/gateware/")
 
 if __name__ == "__main__":

@@ -101,8 +101,11 @@ def main():
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
-    builder = Builder(soc, compile_software=args.build)
+    builder = Builder(soc, compile_software=args.build,csr_json="build/nexys_video/csr.json")
     builder.build(run=args.build)
+
+    os.system("./json2dts.py build/arty/csr.json > build/nexys_video/dts") # FIXME
+    os.system("dtc -O dtb -o images/dtb build/nexys_video/dts")            # FIXME
 
     if args.load:
         prog = soc.platform.create_programmer()

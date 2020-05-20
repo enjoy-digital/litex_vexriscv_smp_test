@@ -105,8 +105,11 @@ def main():
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
-    builder = Builder(soc, compile_software=args.build)
+    builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")
     builder.build(run=args.build)
+
+    os.system("./json2dts.py build/arty/csr.json > build/arty/dts") # FIXME
+    os.system("dtc -O dtb -o images/dtb build/arty/dts")            # FIXME
 
     if args.load:
         prog = soc.platform.create_programmer()
