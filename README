@@ -8,5 +8,5 @@
   add --trace to enable waveform that will be located in build/sim/gateware/dut.vcd
 
 3. Test on Hardware (Arty A7 or Nexys Video):
-  ./target.py --cpu-variant (suported: 1c, 2c, 4c, 8c) --uart-baudrate=1e6 --build --load
+  ./target.py --cpu-variant (suported: 1c, 2c, 4c, 8c) --uart-baudrate=1000000 --build --load
   lxterm --images=images.json /dev/ttyUSBX --speed=1000000 --no-crc

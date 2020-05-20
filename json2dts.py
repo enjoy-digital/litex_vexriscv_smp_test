@@ -23,8 +23,8 @@ dts = """
 / {
 	#address-cells = <0x1>;
 	#size-cells = <0x1>;
-	compatible = "spinal,vexriscv";
-	model = "spinal,vexriscv_sim";
+	compatible = "enjoy-digital,litex-vexriscv-soclinux";
+	model = "VexRiscv SoCLinux";
 """
 
 # Boot Arguments -----------------------------------------------------------------------------------
@@ -33,22 +33,21 @@ dts += """
 	chosen {{
 		bootargs = "mem={main_ram_size_mb}M@0x{main_ram_base:x} rootwait console=hvc0 earlycon=sbi root=/dev/ram0 init=/sbin/init";
 		linux,initrd-start = <0x{linux_initrd_start:x}>;
-		linux,initrd-end   = <0x{linux_initrd_end:x}>; // max 8MB ramdisk image
+		linux,initrd-end   = <0x{linux_initrd_end:x}>;
 	}};
 """.format(
 		main_ram_base=d["memories"]["main_ram"]["base"],
-		main_ram_size=d["memories"]["main_ram"]["size"],
 		main_ram_size_mb=d["memories"]["main_ram"]["size"]//mB,
 
 		linux_initrd_start=d["memories"]["main_ram"]["base"] + 16*mB,
-		linux_initrd_end=d["memories"]["main_ram"]["base"] + (16 + 8)*mB)
+		linux_initrd_end=d["memories"]["main_ram"]["base"] + 24*mB)
 
 # CPU ----------------------------------------------------------------------------------------------
 
 dts += """
 	cpus {{
 		#address-cells = <0x1>;
-		#size-cells = <0x0>;
+		#size-cells    = <0x0>;
 		timebase-frequency = <{sys_clk_freq}>;
 """.format(sys_clk_freq=d["constants"]["config_clock_frequency"])
 
@@ -88,12 +87,12 @@ dts += """
 
 dts += """
 	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
+		#address-cells = <0x1>;
+		#size-cells    = <0x1>;
 		ranges;
 
-		opensbi: sbi@40F00000 {
-			reg = <0x40F00000 0x100000>;
+		opensbi: sbi@40f00000 {
+			reg = <0x40f00000 0x100000>;
 		};
 	};
 """
@@ -103,13 +102,23 @@ dts += """
 dts += """
 	soc {
 		#address-cells = <0x1>;
-		#size-cells = <0x1>;
-		compatible = "spinal,vexriscv-sim";
+		#size-cells    = <0x1>;
+		compatible = "simple-bus";
 		ranges;
-	};
 """
 
+	# SoC Controller -------------------------------------------------------------------------------
+
 dts += """
+		soc_ctrl0: soc_controller@{soc_ctrl_csr_base:x} {{
+			compatible = "litex,soc_controller";
+			reg = <0x{soc_ctrl_csr_base:x} 0xc>;
+			status = "okay";
+		}};
+	""".format(soc_ctrl_csr_base=d["csr_bases"]["ctrl"])
+
+dts += """
+	};
 };
 """
 
