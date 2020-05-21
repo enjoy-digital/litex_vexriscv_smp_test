@@ -5,7 +5,7 @@
 2. Run the simulation:
   ./sim.py  --cpu-variant 4c (suported: 1c, 2c, 4c, 8c)
   add --sdram-init to load the images
-  add --trace to enable waveform that will be located in build/sim/gateware/dut.vcd
+  add --trace to enable waveform that will be located in build/sim/gateware/sim.vcd
 
 3. Test on Hardware (Arty A7 or Nexys Video):
   ./target.py --cpu-variant (suported: 1c, 2c, 4c, 8c) --uart-baudrate=1000000 --build --load
