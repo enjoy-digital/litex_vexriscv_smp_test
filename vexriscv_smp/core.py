@@ -40,6 +40,7 @@ class Open(Signal): pass
 class VexRiscvSMP(CPU):
     name                 = "vexriscv"
     human_name           = "VexRiscv SMP"
+    variants             = CPU_VARIANTS
     data_width           = 32
     endianness           = "little"
     gcc_triple           = ("riscv64-unknown-elf", "riscv32-unknown-elf", "riscv-none-embed",
