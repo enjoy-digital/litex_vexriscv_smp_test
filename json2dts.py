@@ -117,6 +117,25 @@ dts += """
 		}};
 	""".format(soc_ctrl_csr_base=d["csr_bases"]["ctrl"])
 
+	# Ethernet MAC ---------------------------------------------------------------------------------
+if "ethphy" in d["csr_bases"] and "ethmac" not in d["csr_bases"]:
+		pass
+
+if "ethphy" in d["csr_bases"] and "ethmac" in d["csr_bases"]:
+	dts += """
+		mac0: mac@{ethmac_csr_base:x} {{
+			compatible = "litex,liteeth";
+			reg = <0x{ethmac_csr_base:x} 0x7c
+				0x{ethphy_csr_base:x} 0x0a
+				0x{ethmac_mem_base:x} 0x2000>;
+			tx-fifo-depth = <{ethmac_tx_slots}>;
+			rx-fifo-depth = <{ethmac_rx_slots}>;
+		}};
+	""".format(ethphy_csr_base=d["csr_bases"]["ethphy"],
+			   ethmac_csr_base=d["csr_bases"]["ethmac"],
+			   ethmac_mem_base=d["memories"]["ethmac"]["base"],
+			   ethmac_tx_slots=d["constants"]["ethmac_tx_slots"],
+			   ethmac_rx_slots=d["constants"]["ethmac_rx_slots"])
 dts += """
 	};
 };
