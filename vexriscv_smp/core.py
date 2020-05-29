@@ -8,7 +8,7 @@ from migen import *
 
 from litex.soc.interconnect import wishbone
 from litex.soc.interconnect.csr import *
-from litex.soc.cores.cpu import CPU
+from litex.soc.cores.cpu import CPU, CPU_GCC_TRIPLE_RISCV32
 
 from litedram.common import LiteDRAMNativePort
 
@@ -18,6 +18,10 @@ CPU_VARIANTS = {
     "2c":         "VexRiscv",
     "4c":         "VexRiscv",
     "8c":         "VexRiscv",
+    "mp1c":       "VexRiscv",
+    "mp2c":       "VexRiscv",
+    "mp4c":       "VexRiscv",
+    "mp8c":       "VexRiscv",
 }
 
 
@@ -33,6 +37,10 @@ GCC_FLAGS = {
     "2c":       "-march=rv32ima     -mabi=ilp32",
     "4c":       "-march=rv32ima     -mabi=ilp32",
     "8c":       "-march=rv32ima     -mabi=ilp32",
+    "mp1c":     "-march=rv32ima     -mabi=ilp32",
+    "mp2c":     "-march=rv32ima     -mabi=ilp32",
+    "mp4c":     "-march=rv32ima     -mabi=ilp32",
+    "mp8c":     "-march=rv32ima     -mabi=ilp32",
 }
 
 class Open(Signal): pass
@@ -43,8 +51,7 @@ class VexRiscvSMP(CPU):
     variants             = CPU_VARIANTS
     data_width           = 32
     endianness           = "little"
-    gcc_triple           = ("riscv64-unknown-elf", "riscv32-unknown-elf", "riscv-none-embed",
-                            "riscv64-linux", "riscv-sifive-elf", "riscv64-none-elf")
+    gcc_triple           = CPU_GCC_TRIPLE_RISCV32
     linker_output_format = "elf32-littleriscv"
     nop                  = "nop"
     io_regions           = {0x80000000: 0x80000000} # origin, length
@@ -71,14 +78,13 @@ class VexRiscvSMP(CPU):
         self.platform         = platform
         self.variant          = variant
         self.human_name       = self.human_name + "-" + variant.upper()
+        self.cluster_name     = "VexRiscvLitexSmp{mp}Cluster_{n}c".format(mp="Mp" if "mp" in variant else "", n=variant[-2]) # FIXME
         self.reset            = Signal()
         self.pbus             = pbus = wishbone.Interface()
-        self.ibus             = ibus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
-        self.dbus             = dbus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
         self.cbus             = cbus = wishbone.Interface()
 
         self.periph_buses     = [pbus]
-        self.memory_buses     = [ibus, dbus]
+        self.memory_buses     = [] # Added dynamically
 
         os.system("cp images/{}.dtb images/dtb".format(variant)) # FIXME: generate dts/dtb dynamically
 
@@ -101,32 +107,6 @@ class VexRiscvSMP(CPU):
             o_io_jtag_tdo = Open(),
             i_io_jtag_tck = 0,
 
-            # Instruction Memory Bus (Master)
-            o_io_iMem_cmd_valid          = ibus.cmd.valid,
-            i_io_iMem_cmd_ready          = ibus.cmd.ready,
-            o_io_iMem_cmd_payload_we     = ibus.cmd.we,
-            o_io_iMem_cmd_payload_addr   = ibus.cmd.addr,
-            o_io_iMem_wdata_valid        = ibus.wdata.valid,
-            i_io_iMem_wdata_ready        = ibus.wdata.ready,
-            o_io_iMem_wdata_payload_data = ibus.wdata.data,
-            o_io_iMem_wdata_payload_we   = ibus.wdata.we,
-            i_io_iMem_rdata_valid        = ibus.rdata.valid,
-            o_io_iMem_rdata_ready        = ibus.rdata.ready,
-            i_io_iMem_rdata_payload_data = ibus.rdata.data,
-
-            # Data Memory Bus (Master)
-            o_io_dMem_cmd_valid          = dbus.cmd.valid,
-            i_io_dMem_cmd_ready          = dbus.cmd.ready,
-            o_io_dMem_cmd_payload_we     = dbus.cmd.we,
-            o_io_dMem_cmd_payload_addr   = dbus.cmd.addr,
-            o_io_dMem_wdata_valid        = dbus.wdata.valid,
-            i_io_dMem_wdata_ready        = dbus.wdata.ready,
-            o_io_dMem_wdata_payload_data = dbus.wdata.data,
-            o_io_dMem_wdata_payload_we   = dbus.wdata.we,
-            i_io_dMem_rdata_valid        = dbus.rdata.valid,
-            o_io_dMem_rdata_ready        = dbus.rdata.ready,
-            i_io_dMem_rdata_payload_data = dbus.rdata.data,
-
             # Peripheral Bus (Master)
             o_io_peripheral_CYC      = pbus.cyc,
             o_io_peripheral_STB      = pbus.stb,
@@ -148,7 +128,74 @@ class VexRiscvSMP(CPU):
             i_io_clint_ADR      = cbus.adr,
             o_io_clint_DAT_MISO = cbus.dat_r,
             i_io_clint_DAT_MOSI = cbus.dat_w,
+
         )
+        if "mp" in variant:
+            ncpus = int(variant[-2]) # FIXME
+            for n in range(ncpus):
+                ibus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
+                dbus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
+                self.memory_buses.append(ibus)
+                self.memory_buses.append(dbus)
+                self.cpu_params.update({
+                    # Instruction Memory Bus (Master)
+                    "o_io_iMem_{}_cmd_valid".format(n)          : ibus.cmd.valid,
+                    "i_io_iMem_{}_cmd_ready".format(n)          : ibus.cmd.ready,
+                    "o_io_iMem_{}_cmd_payload_we".format(n)     : ibus.cmd.we,
+                    "o_io_iMem_{}_cmd_payload_addr".format(n)   : ibus.cmd.addr,
+                    "o_io_iMem_{}_wdata_valid".format(n)        : ibus.wdata.valid,
+                    "i_io_iMem_{}_wdata_ready".format(n)        : ibus.wdata.ready,
+                    "o_io_iMem_{}_wdata_payload_data".format(n) : ibus.wdata.data,
+                    "o_io_iMem_{}_wdata_payload_we".format(n)   : ibus.wdata.we,
+                    "i_io_iMem_{}_rdata_valid".format(n)        : ibus.rdata.valid,
+                    "o_io_iMem_{}_rdata_ready".format(n)        : ibus.rdata.ready,
+                    "i_io_iMem_{}_rdata_payload_data".format(n) : ibus.rdata.data,
+
+                    # Data Memory Bus (Master)
+                    "o_io_dMem_{}_cmd_valid".format(n)          : dbus.cmd.valid,
+                    "i_io_dMem_{}_cmd_ready".format(n)          : dbus.cmd.ready,
+                    "o_io_dMem_{}_cmd_payload_we".format(n)     : dbus.cmd.we,
+                    "o_io_dMem_{}_cmd_payload_addr".format(n)   : dbus.cmd.addr,
+                    "o_io_dMem_{}_wdata_valid".format(n)        : dbus.wdata.valid,
+                    "i_io_dMem_{}_wdata_ready".format(n)        : dbus.wdata.ready,
+                    "o_io_dMem_{}_wdata_payload_data".format(n) : dbus.wdata.data,
+                    "o_io_dMem_{}_wdata_payload_we".format(n)   : dbus.wdata.we,
+                    "i_io_dMem_{}_rdata_valid".format(n)        : dbus.rdata.valid,
+                    "o_io_dMem_{}_rdata_ready".format(n)        : dbus.rdata.ready,
+                    "i_io_dMem_{}_rdata_payload_data".format(n) : dbus.rdata.data,
+                })
+        else:
+            ibus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
+            dbus = LiteDRAMNativePort(mode="both", address_width=32, data_width=128)
+            self.memory_buses.append(ibus)
+            self.memory_buses.append(dbus)
+            self.cpu_params.update(
+                # Instruction Memory Bus (Master)
+                o_io_iMem_cmd_valid          = ibus.cmd.valid,
+                i_io_iMem_cmd_ready          = ibus.cmd.ready,
+                o_io_iMem_cmd_payload_we     = ibus.cmd.we,
+                o_io_iMem_cmd_payload_addr   = ibus.cmd.addr,
+                o_io_iMem_wdata_valid        = ibus.wdata.valid,
+                i_io_iMem_wdata_ready        = ibus.wdata.ready,
+                o_io_iMem_wdata_payload_data = ibus.wdata.data,
+                o_io_iMem_wdata_payload_we   = ibus.wdata.we,
+                i_io_iMem_rdata_valid        = ibus.rdata.valid,
+                o_io_iMem_rdata_ready        = ibus.rdata.ready,
+                i_io_iMem_rdata_payload_data = ibus.rdata.data,
+
+                # Data Memory Bus (Master)
+                o_io_dMem_cmd_valid          = dbus.cmd.valid,
+                i_io_dMem_cmd_ready          = dbus.cmd.ready,
+                o_io_dMem_cmd_payload_we     = dbus.cmd.we,
+                o_io_dMem_cmd_payload_addr   = dbus.cmd.addr,
+                o_io_dMem_wdata_valid        = dbus.wdata.valid,
+                i_io_dMem_wdata_ready        = dbus.wdata.ready,
+                o_io_dMem_wdata_payload_data = dbus.wdata.data,
+                o_io_dMem_wdata_payload_we   = dbus.wdata.we,
+                i_io_dMem_rdata_valid        = dbus.rdata.valid,
+                o_io_dMem_rdata_ready        = dbus.rdata.ready,
+                i_io_dMem_rdata_payload_data = dbus.rdata.data,
+            )
 
         # Add verilog sources
         self.add_sources(platform, variant)
@@ -158,11 +205,10 @@ class VexRiscvSMP(CPU):
         self.reset_address = reset_address
         assert reset_address == 0x00000000
 
-    @staticmethod
-    def add_sources(platform, variant):
+    def add_sources(self, platform, variant):
         platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "RamXilinx.v"))
-        platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", "VexRiscvLitexSmpCluster_" + variant + ".v"))
+        platform.add_source(os.path.join(os.path.dirname(__file__), "..", "verilog", self.cluster_name + ".v"))
 
     def do_finalize(self):
         assert hasattr(self, "reset_address")
-        self.specials += Instance("VexRiscvLitexSmpCluster_" + self.variant, **self.cpu_params)
+        self.specials += Instance(self.cluster_name, **self.cpu_params)
