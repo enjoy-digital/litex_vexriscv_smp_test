@@ -51,7 +51,7 @@ class Platform(SimPlatform):
 class SoCSMP(SoCCore):
     def __init__(self, cpu_variant, init_memories=False):
         platform     = Platform()
-        sys_clk_freq = int(1e6)
+        sys_clk_freq = int(100e6)
 
         sdram_init = []
         if init_memories:
