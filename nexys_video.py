@@ -104,7 +104,7 @@ def main():
     builder = Builder(soc, compile_software=args.build,csr_json="build/nexys_video/csr.json")
     builder.build(run=args.build)
 
-    os.system("./json2dts.py build/arty/csr.json > build/nexys_video/dts") # FIXME
+    os.system("./json2dts.py build/nexys_video/csr.json > build/nexys_video/dts") # FIXME
     os.system("dtc -O dtb -o images/dtb build/nexys_video/dts")            # FIXME
 
     if args.load:
