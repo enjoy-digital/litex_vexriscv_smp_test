@@ -1,6 +1,6 @@
-// Generator : SpinalHDL v1.4.2    git head : cf60989ae1662a3f9ce0cf0a5226f26d377fb557
+// Generator : SpinalHDL v1.4.2    git head : fa4753301b3b0434e5e1d5bf1217b37f3d7a0437
 // Component : VexRiscvLitexSmpCluster_4c
-// Git hash  : cf60989ae1662a3f9ce0cf0a5226f26d377fb557
+// Git hash  : 9c8387ffc5a116953c9d88060983b7a87f9f6846
 
 
 `define BranchCtrlEnum_defaultEncoding_type [1:0]
@@ -2355,6 +2355,15 @@ module BmbToLiteDram_1 (
   wire       [3:0]    cmdContext_payload_context;
   wire       [1:0]    cmdContext_payload_source;
   wire                cmdContext_payload_isWrite;
+  reg                 writeTocken_incrementIt;
+  reg                 writeTocken_decrementIt;
+  wire       [5:0]    writeTocken_valueNext;
+  reg        [5:0]    writeTocken_value;
+  wire                writeTocken_willOverflowIfInc;
+  wire                writeTocken_willOverflow;
+  reg        [5:0]    writeTocken_finalIncrement;
+  wire                canRspWrite;
+  wire                canRspRead;
 
   assign _zz_14 = (streamFork_5_io_outputs_0_payload_fragment_address >>> 4);
   assign _zz_15 = (pendingRead + _zz_17);
@@ -2484,9 +2493,40 @@ module BmbToLiteDram_1 (
   assign halt = (! cmdContext_ready);
   assign cmdContext_ready = cmdContext_fifo_io_push_ready;
   assign io_output_rdata_ready = io_output_rdata_fifo_io_push_ready;
+  always @ (*) begin
+    writeTocken_incrementIt = 1'b0;
+    if((io_output_wdata_valid && io_output_wdata_ready))begin
+      writeTocken_incrementIt = 1'b1;
+    end
+  end
+
+  always @ (*) begin
+    writeTocken_decrementIt = 1'b0;
+    if(((cmdContext_fifo_io_pop_valid && _zz_10) && cmdContext_fifo_io_pop_payload_isWrite))begin
+      writeTocken_decrementIt = 1'b1;
+    end
+  end
+
+  assign writeTocken_willOverflowIfInc = ((writeTocken_value == 6'h3f) && (! writeTocken_decrementIt));
+  assign writeTocken_willOverflow = (writeTocken_willOverflowIfInc && writeTocken_incrementIt);
+  always @ (*) begin
+    if((writeTocken_incrementIt && (! writeTocken_decrementIt)))begin
+      writeTocken_finalIncrement = 6'h01;
+    end else begin
+      if(((! writeTocken_incrementIt) && writeTocken_decrementIt))begin
+        writeTocken_finalIncrement = 6'h3f;
+      end else begin
+        writeTocken_finalIncrement = 6'h0;
+      end
+    end
+  end
+
+  assign writeTocken_valueNext = (writeTocken_value + writeTocken_finalIncrement);
+  assign canRspWrite = (writeTocken_value != 6'h0);
+  assign canRspRead = io_output_rdata_fifo_io_pop_valid;
   assign _zz_12 = ((_zz_4 && io_input_unburstify_io_output_rsp_ready) && (! cmdContext_fifo_io_pop_payload_isWrite));
   assign _zz_10 = (_zz_4 && io_input_unburstify_io_output_rsp_ready);
-  assign _zz_4 = (cmdContext_fifo_io_pop_valid && (cmdContext_fifo_io_pop_payload_isWrite || io_output_rdata_fifo_io_pop_valid));
+  assign _zz_4 = (cmdContext_fifo_io_pop_valid && (cmdContext_fifo_io_pop_payload_isWrite ? canRspWrite : canRspRead));
   assign _zz_6 = 1'b0;
   assign _zz_5 = 1'b1;
   assign _zz_11 = 1'b0;
@@ -2495,10 +2535,12 @@ module BmbToLiteDram_1 (
     if (reset) begin
       pendingRead <= 6'h0;
       outputCmd_m2sPipe_rValid <= 1'b0;
+      writeTocken_value <= 6'h0;
     end else begin
       if(outputCmd_ready)begin
         outputCmd_m2sPipe_rValid <= outputCmd_valid;
       end
+      writeTocken_value <= writeTocken_valueNext;
       pendingRead <= (_zz_15 - _zz_19);
     end
   end
@@ -2992,6 +3034,15 @@ module BmbToLiteDram (
   wire                cmdContext_ready;
   wire       [48:0]   cmdContext_payload_context;
   wire                cmdContext_payload_isWrite;
+  reg                 writeTocken_incrementIt;
+  reg                 writeTocken_decrementIt;
+  wire       [5:0]    writeTocken_valueNext;
+  reg        [5:0]    writeTocken_value;
+  wire                writeTocken_willOverflowIfInc;
+  wire                writeTocken_willOverflow;
+  reg        [5:0]    writeTocken_finalIncrement;
+  wire                canRspWrite;
+  wire                canRspRead;
 
   assign _zz_15 = (streamFork_5_io_outputs_1_payload_fragment_opcode == 1'b0);
   assign _zz_16 = (streamFork_5_io_outputs_0_payload_fragment_address >>> 4);
@@ -3196,9 +3247,40 @@ module BmbToLiteDram (
   assign halt = (! cmdContext_ready);
   assign cmdContext_ready = cmdContext_fifo_io_push_ready;
   assign io_output_rdata_ready = io_output_rdata_fifo_io_push_ready;
+  always @ (*) begin
+    writeTocken_incrementIt = 1'b0;
+    if((io_output_wdata_valid && io_output_wdata_ready))begin
+      writeTocken_incrementIt = 1'b1;
+    end
+  end
+
+  always @ (*) begin
+    writeTocken_decrementIt = 1'b0;
+    if(((cmdContext_fifo_io_pop_valid && _zz_11) && cmdContext_fifo_io_pop_payload_isWrite))begin
+      writeTocken_decrementIt = 1'b1;
+    end
+  end
+
+  assign writeTocken_willOverflowIfInc = ((writeTocken_value == 6'h3f) && (! writeTocken_decrementIt));
+  assign writeTocken_willOverflow = (writeTocken_willOverflowIfInc && writeTocken_incrementIt);
+  always @ (*) begin
+    if((writeTocken_incrementIt && (! writeTocken_decrementIt)))begin
+      writeTocken_finalIncrement = 6'h01;
+    end else begin
+      if(((! writeTocken_incrementIt) && writeTocken_decrementIt))begin
+        writeTocken_finalIncrement = 6'h3f;
+      end else begin
+        writeTocken_finalIncrement = 6'h0;
+      end
+    end
+  end
+
+  assign writeTocken_valueNext = (writeTocken_value + writeTocken_finalIncrement);
+  assign canRspWrite = (writeTocken_value != 6'h0);
+  assign canRspRead = io_output_rdata_fifo_io_pop_valid;
   assign _zz_13 = ((_zz_4 && io_input_upSizer_io_output_unburstify_io_output_rsp_ready) && (! cmdContext_fifo_io_pop_payload_isWrite));
   assign _zz_11 = (_zz_4 && io_input_upSizer_io_output_unburstify_io_output_rsp_ready);
-  assign _zz_4 = (cmdContext_fifo_io_pop_valid && (cmdContext_fifo_io_pop_payload_isWrite || io_output_rdata_fifo_io_pop_valid));
+  assign _zz_4 = (cmdContext_fifo_io_pop_valid && (cmdContext_fifo_io_pop_payload_isWrite ? canRspWrite : canRspRead));
   assign _zz_6 = 1'b0;
   assign _zz_5 = 1'b1;
   assign _zz_10 = 1'b0;
@@ -3208,10 +3290,12 @@ module BmbToLiteDram (
     if (reset) begin
       pendingRead <= 6'h0;
       outputCmd_m2sPipe_rValid <= 1'b0;
+      writeTocken_value <= 6'h0;
     end else begin
       if(outputCmd_ready)begin
         outputCmd_m2sPipe_rValid <= outputCmd_valid;
       end
+      writeTocken_value <= writeTocken_valueNext;
       pendingRead <= (_zz_17 - _zz_21);
     end
   end
