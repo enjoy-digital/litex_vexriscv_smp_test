@@ -1,0 +1,10 @@
+[> How to use
+------------------
+
+1. Compile https://github.com/SpinalHDL/openocd_riscv
+
+2. Booting linux through JTAG :
+   PATH_TO_OPENOCD_RISCV/src/openocd -s PATH_TO_OPENOCD_RISCV/tcl -c 'set CPU0_YAML openocd/cpu0.yaml' -f openocd.cfg -c 'set cpu_count SOC_CPU_COUNT' -f openocd/soc_init.cfg -f openocd/linux_boot.cfg
+
+Note that currently, the JTAG will only properly work when the CPU is in machine mode (litex BIOS), once in linux you
+will have to reset the board to reuse the JTAG as currently the debug reset isn't connected.
