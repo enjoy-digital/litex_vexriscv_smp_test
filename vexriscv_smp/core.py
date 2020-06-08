@@ -80,6 +80,14 @@ class VexRiscvSMP(CPU):
         self.human_name       = self.human_name + "-" + variant.upper()
         self.cluster_name     = "VexRiscvLitexSmp{mp}Cluster_{n}c".format(mp="Mp" if "mp" in variant else "", n=variant[-2]) # FIXME
         self.reset            = Signal()
+        self.jtag_clk         = Signal()
+        self.jtag_enable      = Signal()
+        self.jtag_capture     = Signal()
+        self.jtag_shift       = Signal()
+        self.jtag_update      = Signal()
+        self.jtag_reset       = Signal()
+        self.jtag_tdo         = Signal()
+        self.jtag_tdi         = Signal()
         self.pbus             = pbus = wishbone.Interface()
         self.cbus             = cbus = wishbone.Interface()
 
@@ -102,10 +110,14 @@ class VexRiscvSMP(CPU):
             i_io_externalSupervisorInterrupts = 0,
 
             # JTAG
-            i_io_jtag_tms = 0,
-            i_io_jtag_tdi = 0,
-            o_io_jtag_tdo = Open(),
-            i_io_jtag_tck = 0,
+            i_jtag_clk                   = self.jtag_clk,
+            i_io_jtagInstruction_enable  = self.jtag_enable,
+            i_io_jtagInstruction_capture = self.jtag_capture,
+            i_io_jtagInstruction_shift   = self.jtag_shift,
+            i_io_jtagInstruction_update  = self.jtag_update,
+            i_io_jtagInstruction_reset   = self.jtag_reset,
+            i_io_jtagInstruction_tdi     = self.jtag_tdi,
+            o_io_jtagInstruction_tdo     = self.jtag_tdo,
 
             # Peripheral Bus (Master)
             o_io_peripheral_CYC      = pbus.cyc,

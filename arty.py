@@ -7,6 +7,7 @@
 import os
 import argparse
 
+from litex.soc.cores.jtag import S7JTAG
 from migen import *
 
 from litex_boards.platforms import arty
@@ -93,7 +94,20 @@ class BaseSoC(SoCCore):
             self.add_csr("ethphy")
             self.add_ethernet(phy=self.ethphy)
 
-# Build --------------------------------------------------------------------------------------------
+        # JTAG ---------------------------------------------------------------------------------
+        self.submodules.jtag = S7JTAG()
+        self.comb += self.cpu.jtag_clk.eq(self.jtag.tck)
+        self.comb += self.cpu.jtag_enable.eq(1)
+        self.comb += self.cpu.jtag_capture.eq(self.jtag.capture)
+        self.comb += self.cpu.jtag_shift.eq(self.jtag.shift)
+        self.comb += self.cpu.jtag_update.eq(self.jtag.update)
+        self.comb += self.cpu.jtag_reset.eq(self.jtag.reset)
+        self.comb += self.cpu.jtag_tdi.eq(self.jtag.tdi)
+        self.comb += self.jtag.tdo.eq(self.cpu.jtag_tdo)
+
+
+
+    # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Nexys Video")
