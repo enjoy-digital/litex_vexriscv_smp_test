@@ -54,11 +54,13 @@ class _CRG(Module):
 # BaseSoC ------------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, **kwargs):
+    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_variant="1c", **kwargs):
         platform = arty.Platform()
+        platform.add_extension(arty._sdcard_pmod_io) # MicroSD PMOD on JB.
 
         # SoCCore ----------------------------------------------------------------------------------
-        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, **kwargs)
+        kwargs["integrated_rom_size"] = 0x10000
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant=cpu_variant, **kwargs)
 
         # CLINT ------------------------------------------------------------------------------------
         self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(origin=0xf0010000, size=0x10000, cached=False))
@@ -105,9 +107,7 @@ class BaseSoC(SoCCore):
         self.comb += self.cpu.jtag_tdi.eq(self.jtag.tdi)
         self.comb += self.jtag.tdo.eq(self.cpu.jtag_tdo)
 
-
-
-    # Build --------------------------------------------------------------------------------------------
+# Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Nexys Video")
@@ -116,9 +116,12 @@ def main():
     builder_args(parser)
     soc_sdram_args(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
+    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SPI Mode)")
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
+    if args.with_sdcard:
+        soc.add_spi_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")
     builder.build(run=args.build)
 
