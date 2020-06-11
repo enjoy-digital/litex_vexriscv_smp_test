@@ -71,6 +71,12 @@ class SoCSMP(SoCCore):
         self.platform.name = "sim"
         self.add_constant("SIM")
 
+        # PLIC ------------------------------------------------------------------------------------
+        self.bus.add_slave("plic", self.cpu.plicbus, region=SoCRegion(origin=0xf0C00000, size=0x400000, cached=False))
+        interrupt_map = {**SoCCore.interrupt_map, **{
+            "uart":       1,
+        }}
+
         # CLINT ------------------------------------------------------------------------------------
         self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(origin=0xf0010000, size=0x10000, cached=False))
 
@@ -131,7 +137,8 @@ def main():
             opt_level   = args.opt_level,
             trace       = args.trace,
             trace_start = int(args.trace_start),
-            trace_end   = int(args.trace_end))
+            trace_end   = int(args.trace_end),
+            trace_fst   = 1)
         os.chdir("../")
         if i == 0:
             os.system("./json2dts.py build/sim/csr.json > build/sim/dts") # FIXME

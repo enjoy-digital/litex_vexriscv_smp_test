@@ -62,6 +62,14 @@ class BaseSoC(SoCCore):
         kwargs["integrated_rom_size"] = 0x10000
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant=cpu_variant, **kwargs)
 
+
+        # PLIC ------------------------------------------------------------------------------------
+        self.bus.add_slave("plic", self.cpu.plicbus, region=SoCRegion(origin=0xf0C00000, size=0x400000, cached=False))
+        self.interrupt_map = {**SoCCore.interrupt_map, **{
+            "uart":         1,
+            "ethmac":       2,
+        }}
+
         # CLINT ------------------------------------------------------------------------------------
         self.bus.add_slave("clint", self.cpu.cbus, region=SoCRegion(origin=0xf0010000, size=0x10000, cached=False))
 

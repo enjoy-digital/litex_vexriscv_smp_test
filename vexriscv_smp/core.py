@@ -70,6 +70,7 @@ class VexRiscvSMP(CPU):
     def gcc_flags(self):
         flags = GCC_FLAGS[self.variant]
         flags += " -D__vexriscv__"
+        flags += " -DUART_POLLING"
         return flags
 
     def __init__(self, platform, variant):
@@ -88,8 +89,10 @@ class VexRiscvSMP(CPU):
         self.jtag_reset       = Signal()
         self.jtag_tdo         = Signal()
         self.jtag_tdi         = Signal()
+        self.interrupt        = Signal(32)
         self.pbus             = pbus = wishbone.Interface()
         self.cbus             = cbus = wishbone.Interface()
+        self.plicbus          = plicbus = wishbone.Interface()
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
@@ -106,8 +109,7 @@ class VexRiscvSMP(CPU):
             o_io_debugReset = Open(),
 
             # Interrupts
-            i_io_externalInterrupts           = 0,
-            i_io_externalSupervisorInterrupts = 0,
+            i_io_interrupts           = self.interrupt,
 
             # JTAG
             i_jtag_clk                   = self.jtag_clk,
@@ -140,6 +142,15 @@ class VexRiscvSMP(CPU):
             i_io_clint_ADR      = cbus.adr,
             o_io_clint_DAT_MISO = cbus.dat_r,
             i_io_clint_DAT_MOSI = cbus.dat_w,
+
+            # PLIC Bus (Slave)
+            i_io_plic_CYC      = plicbus.cyc,
+            i_io_plic_STB      = plicbus.stb,
+            o_io_plic_ACK      = plicbus.ack,
+            i_io_plic_WE       = plicbus.we,
+            i_io_plic_ADR      = plicbus.adr,
+            o_io_plic_DAT_MISO = plicbus.dat_r,
+            i_io_plic_DAT_MOSI = plicbus.dat_w,
 
         )
         if "mp" in variant:
