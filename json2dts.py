@@ -67,7 +67,7 @@ for cpu in cpus:
 				compatible = "riscv,cpu-intc";
 			}};
 		}};
-""".format(cpu=cpu, irq=cpu + 1)
+""".format(cpu=cpu, irq=cpu)
 
 dts += """
 	};
@@ -117,6 +117,22 @@ dts += """
 		}};
 	""".format(soc_ctrl_csr_base=d["csr_bases"]["ctrl"])
 
+
+	# PLIC -------------------------------------------------------------------------------
+
+dts += """
+		plic: interrupt-controller@{plic_base:x} {{
+			compatible = "sifive,plic-1.0.0", "sifive,fu540-c000-plic";
+			reg = <0x{plic_base:x} 0x400000>;
+			#interrupt-cells = <1>;
+			interrupt-controller;
+			interrupts-extended = <
+				{cpu_mapping}>;
+			riscv,ndev = <32>;
+		}};
+	""".format(	plic_base=d["memories"]["plic"]["base"],
+				cpu_mapping="\n\t\t\t\t".join(["&L{} 11 &L{} 9".format(cpu, cpu) for cpu in cpus]))
+
 	# Ethernet MAC ---------------------------------------------------------------------------------
 if "ethphy" in d["csr_bases"] and "ethmac" not in d["csr_bases"]:
 		pass
@@ -130,12 +146,15 @@ if "ethphy" in d["csr_bases"] and "ethmac" in d["csr_bases"]:
 				0x{ethmac_mem_base:x} 0x2000>;
 			tx-fifo-depth = <{ethmac_tx_slots}>;
 			rx-fifo-depth = <{ethmac_rx_slots}>;
+			interrupt-parent = <&plic>;
+			interrupts = <{ethmac_interrupt}>;
 		}};
 	""".format(ethphy_csr_base=d["csr_bases"]["ethphy"],
 			   ethmac_csr_base=d["csr_bases"]["ethmac"],
 			   ethmac_mem_base=d["memories"]["ethmac"]["base"],
 			   ethmac_tx_slots=d["constants"]["ethmac_tx_slots"],
-			   ethmac_rx_slots=d["constants"]["ethmac_rx_slots"])
+			   ethmac_rx_slots=d["constants"]["ethmac_rx_slots"],
+			   ethmac_interrupt=d["constants"]["ethmac_interrupt"])
 dts += """
 	};
 };
