@@ -50,10 +50,9 @@ class _CRG(Module):
 
 class BaseSoC(SoCCore):
     interrupt_map = {
-        "uart":         1,
-        "ethmac":       2,
+        "reserved":       0,
     }
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_variant="1c", **kwargs):
+    def __init__(self, sys_clk_freq=int(125e6), with_ethernet=False, cpu_variant="1c", **kwargs):
         platform = genesys2.Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
