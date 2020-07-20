@@ -116,18 +116,18 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Nexys Video")
+    parser = argparse.ArgumentParser(description="LiteX SoC on Arty")
     parser.add_argument("--build", action="store_true", help="Build bitstream")
     parser.add_argument("--load",  action="store_true", help="Load bitstream")
     builder_args(parser)
     soc_sdram_args(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
-    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SPI Mode)")
+    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SD Mode)")
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
     if args.with_sdcard:
-        soc.add_spi_sdcard()
+        soc.add_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")
     builder.build(run=args.build)
 
