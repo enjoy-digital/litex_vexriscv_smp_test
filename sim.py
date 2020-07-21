@@ -57,7 +57,7 @@ class SoCSMP(SoCCore):
 
         # -------------------------------------------------------------------------------------------
         platform     = Platform()
-        sys_clk_freq = int(100e6)
+        sys_clk_freq = int(1e6)
 
         sdram_init = []
         if init_memories:
@@ -122,6 +122,7 @@ class SoCSMP(SoCCore):
         # SDCard -----------------------------------------------------------------------------------
         if with_sdcard:
             self.add_sdcard("sdcard", use_emulator=True)
+            self.add_constant("SDCARD_DEBUG")
 
 # Build --------------------------------------------------------------------------------------------
 
@@ -154,7 +155,7 @@ def main():
             trace       = args.trace,
             trace_start = int(args.trace_start),
             trace_end   = int(args.trace_end),
-            trace_fst   = 1)
+            trace_fst   = args.trace)
         os.chdir("../")
         if i == 0:
             os.system("./json2dts.py build/sim/csr.json > build/sim/dts") # FIXME

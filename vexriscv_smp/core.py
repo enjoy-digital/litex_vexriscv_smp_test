@@ -33,11 +33,12 @@ class VexRiscvSMP(CPU):
     linker_output_format = "elf32-littleriscv"
     nop                  = "nop"
     io_regions           = {0x80000000: 0x80000000} # origin, length
-    cpu_count = 1
-    coherent_dma= False
+
+    cpu_count      = 1
+    coherent_dma   = False
     litedram_width = 128
-    dbus_width = 64
-    ibus_width = 64
+    dbus_width     = 64
+    ibus_width     = 64
 
     @staticmethod
     def args_fill(parser):
@@ -50,7 +51,7 @@ class VexRiscvSMP(CPU):
 
     @staticmethod
     def args_read(args):
-        VexRiscvSMP.cpu_count = args.cpu_count
+        VexRiscvSMP.cpu_count   = args.cpu_count
         VexRiscvSMP.dcache_size = args.dcache_size
         VexRiscvSMP.icache_size = args.icache_size
         VexRiscvSMP.dcache_ways = args.dcache_ways
@@ -112,7 +113,7 @@ class VexRiscvSMP(CPU):
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
-        self.dma_buses        = []
+        self.dma_buses        = [] # Added dynamically
 
         print(f"VexRiscv cluster : {self.cluster_name}")
         if not path.exists(f"verilog/{self.cluster_name}.v"):
@@ -123,34 +124,34 @@ class VexRiscvSMP(CPU):
         # # #
         self.cpu_params = dict(
             # Clk / Rst
-            i_debugCd_external_clk           = ClockSignal(),
-            i_debugCd_external_reset         = ResetSignal() | self.reset,
+            i_debugCd_external_clk   = ClockSignal(),
+            i_debugCd_external_reset = ResetSignal() | self.reset,
 
             # Interrupts
-            i_interrupts        = self.interrupt,
+            i_interrupts             = self.interrupt,
 
             # JTAG
-            i_jtag_clk          = self.jtag_clk,
-            i_debugPort_enable  = self.jtag_enable,
-            i_debugPort_capture = self.jtag_capture,
-            i_debugPort_shift   = self.jtag_shift,
-            i_debugPort_update  = self.jtag_update,
-            i_debugPort_reset   = self.jtag_reset,
-            i_debugPort_tdi     = self.jtag_tdi,
-            o_debugPort_tdo     = self.jtag_tdo,
+            i_jtag_clk               = self.jtag_clk,
+            i_debugPort_enable       = self.jtag_enable,
+            i_debugPort_capture      = self.jtag_capture,
+            i_debugPort_shift        = self.jtag_shift,
+            i_debugPort_update       = self.jtag_update,
+            i_debugPort_reset        = self.jtag_reset,
+            i_debugPort_tdi          = self.jtag_tdi,
+            o_debugPort_tdo          = self.jtag_tdo,
 
             # Peripheral Bus (Master)
-            o_peripheral_CYC      = pbus.cyc,
-            o_peripheral_STB      = pbus.stb,
-            i_peripheral_ACK      = pbus.ack,
-            o_peripheral_WE       = pbus.we,
-            o_peripheral_ADR      = pbus.adr,
-            i_peripheral_DAT_MISO = pbus.dat_r,
-            o_peripheral_DAT_MOSI = pbus.dat_w,
-            o_peripheral_SEL      = pbus.sel,
-            i_peripheral_ERR      = pbus.err,
-            o_peripheral_CTI      = pbus.cti,
-            o_peripheral_BTE      = pbus.bte,
+            o_peripheral_CYC         = pbus.cyc,
+            o_peripheral_STB         = pbus.stb,
+            i_peripheral_ACK         = pbus.ack,
+            o_peripheral_WE          = pbus.we,
+            o_peripheral_ADR         = pbus.adr,
+            i_peripheral_DAT_MISO    = pbus.dat_r,
+            o_peripheral_DAT_MOSI    = pbus.dat_w,
+            o_peripheral_SEL         = pbus.sel,
+            i_peripheral_ERR         = pbus.err,
+            o_peripheral_CTI         = pbus.cti,
+            o_peripheral_BTE         = pbus.bte,
 
             # CLINT Bus (Slave)
             i_clintWishbone_CYC      = cbus.cyc,
@@ -162,32 +163,46 @@ class VexRiscvSMP(CPU):
             i_clintWishbone_DAT_MOSI = cbus.dat_w,
 
             # PLIC Bus (Slave)
-            i_plicWishbone_CYC      = plicbus.cyc,
-            i_plicWishbone_STB      = plicbus.stb,
-            o_plicWishbone_ACK      = plicbus.ack,
-            i_plicWishbone_WE       = plicbus.we,
-            i_plicWishbone_ADR      = plicbus.adr,
-            o_plicWishbone_DAT_MISO = plicbus.dat_r,
-            i_plicWishbone_DAT_MOSI = plicbus.dat_w
+            i_plicWishbone_CYC       = plicbus.cyc,
+            i_plicWishbone_STB       = plicbus.stb,
+            o_plicWishbone_ACK       = plicbus.ack,
+            i_plicWishbone_WE        = plicbus.we,
+            i_plicWishbone_ADR       = plicbus.adr,
+            o_plicWishbone_DAT_MISO  = plicbus.dat_r,
+            i_plicWishbone_DAT_MOSI  = plicbus.dat_w
         )
 
         if self.coherent_dma:
             self.dmabus = dmabus = wishbone.Interface(data_width=64)
             self.dma_buses.append(dmabus)
 
-            dmabus_stall = Signal()
+            dmabus_stall   = Signal()
             dmabus_inhibit = Signal()
-            
-            self.cpu_params.update(dict(
-                i_dma_wishbone_CYC=dmabus.cyc,
-                i_dma_wishbone_STB=dmabus.stb & ~dmabus_inhibit,
-                o_dma_wishbone_ACK=dmabus.ack,
-                i_dma_wishbone_WE=dmabus.we,
-                i_dma_wishbone_ADR=dmabus.adr,
-                o_dma_wishbone_DAT_MISO=dmabus.dat_r,
-                i_dma_wishbone_DAT_MOSI=dmabus.dat_w,
-                o_dma_wishbone_STALL=dmabus_stall
-            ))
+
+            self.cpu_params.update(
+                i_dma_wishbone_CYC      = dmabus.cyc,
+                i_dma_wishbone_STB      = dmabus.stb & ~dmabus_inhibit,
+                o_dma_wishbone_ACK      = dmabus.ack,
+                i_dma_wishbone_WE       = dmabus.we,
+                i_dma_wishbone_SEL      = dmabus.sel,
+                i_dma_wishbone_ADR      = dmabus.adr,
+                o_dma_wishbone_DAT_MISO = dmabus.dat_r,
+                i_dma_wishbone_DAT_MOSI = dmabus.dat_w,
+                o_dma_wishbone_STALL    = dmabus_stall
+            )
+            self.sync += If(dmabus.stb,
+                Display("DMA stb:%d, ack:%d, stall:%d, inhibit:%d, sel:%x, adr:%x",
+                    dmabus.stb,
+                    dmabus.ack,
+                    dmabus_stall,
+                    dmabus_inhibit,
+                    dmabus.sel,
+                    dmabus.adr,
+                ),
+            )
+            finish_counter = Signal(32)
+            self.sync += finish_counter.eq(finish_counter + dmabus.stb)
+            self.sync += If(finish_counter == 1024, Finish())
 
             self.sync += [
                 If(dmabus.stb & dmabus.cyc,
