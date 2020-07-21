@@ -190,19 +190,6 @@ class VexRiscvSMP(CPU):
                 i_dma_wishbone_DAT_MOSI = dmabus.dat_w,
                 o_dma_wishbone_STALL    = dmabus_stall
             )
-            self.sync += If(dmabus.stb,
-                Display("DMA stb:%d, ack:%d, stall:%d, inhibit:%d, sel:%x, adr:%x",
-                    dmabus.stb,
-                    dmabus.ack,
-                    dmabus_stall,
-                    dmabus_inhibit,
-                    dmabus.sel,
-                    dmabus.adr,
-                ),
-            )
-            finish_counter = Signal(32)
-            self.sync += finish_counter.eq(finish_counter + dmabus.stb)
-            self.sync += If(finish_counter == 1024, Finish())
 
             self.sync += [
                 If(dmabus.stb & dmabus.cyc & ~dmabus_stall,
