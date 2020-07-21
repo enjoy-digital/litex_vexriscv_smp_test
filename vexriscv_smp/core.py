@@ -35,10 +35,25 @@ class VexRiscvSMP(CPU):
     io_regions           = {0x80000000: 0x80000000} # origin, length
     cpu_count = 1
     coherent_dma= False
-    litedram_data_width = 128
+    litedram_width = 128
     dbus_width = 64
     ibus_width = 64
 
+    @staticmethod
+    def args_fill(parser):
+        parser.add_argument("--dcache-size", default=8192, help="")
+        parser.add_argument("--dcache-ways", default=2, help="")
+        parser.add_argument("--icache-size", default=8192, help="")
+        parser.add_argument("--icache-ways", default=2, help="")
+
+
+    @staticmethod
+    def args_read(args):
+        VexRiscvSMP.cpu_count = args.cpu_count
+        VexRiscvSMP.dcache_size = args.dcache_size
+        VexRiscvSMP.icache_size = args.icache_size
+        VexRiscvSMP.dcache_ways = args.dcache_ways
+        VexRiscvSMP.icache_ways = args.icache_ways
 
     @property
     def mem_map(self):
@@ -65,7 +80,11 @@ class VexRiscvSMP(CPU):
         gen_args.append(f"--cpu-count={self.cpu_count}")
         gen_args.append(f"--ibus-width={self.ibus_width}")
         gen_args.append(f"--dbus-width={self.dbus_width}")
-        gen_args.append(f"--litedram-width={self.litedram_data_width}")
+        gen_args.append(f"--dcache-size={self.dcache_size}")
+        gen_args.append(f"--icache-size={self.icache_size}")
+        gen_args.append(f"--dcache-ways={self.dcache_ways}")
+        gen_args.append(f"--icache-ways={self.icache_ways}")
+        gen_args.append(f"--litedram-width={self.litedram_width}")
         gen_args.append(f"--netlist-directory={os.path.abspath(os.getcwd())}/verilog")
         gen_args.append(f"--netlist-name={self.cluster_name}")
 
@@ -75,7 +94,7 @@ class VexRiscvSMP(CPU):
         self.platform         = platform
         self.variant          = "variant"
         self.human_name       = self.human_name + "-" + variant.upper()
-        self.cluster_name     = f"VexRiscvLitexSmpClusterCc{self.cpu_count}Iw{self.ibus_width}Dw{self.dbus_width}Ldw{self.litedram_data_width}{'Cdma' if self.coherent_dma else ''}"
+        self.cluster_name     = f"VexRiscvLitexSmpCluster_Cc{self.cpu_count}_Iw{self.ibus_width}Is{self.icache_size}Iy{self.icache_ways}_Dw{self.dbus_width}Ds{self.dcache_size}Dy{self.dcache_ways}_Ldw{self.litedram_width}{'_Cdma' if self.coherent_dma else ''}"
         self.reset            = Signal()
         self.jtag_clk         = Signal()
         self.jtag_enable      = Signal()

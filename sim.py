@@ -50,11 +50,10 @@ class Platform(SimPlatform):
 class SoCSMP(SoCCore):
     def __init__(self, cpu_count, init_memories=False):
         # Cluster configs ---------------------------------------------------------------------
-        VexRiscvSMP.litedram_data_width = 128
+        VexRiscvSMP.litedram_width = 128
         VexRiscvSMP.ibus_width = 64
         VexRiscvSMP.dbus_width = 64
         VexRiscvSMP.coherent_dma = False
-        VexRiscvSMP.cpu_count = cpu_count
 
         # -------------------------------------------------------------------------------------------
         platform     = Platform()
@@ -125,6 +124,7 @@ class SoCSMP(SoCCore):
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
 
+    VexRiscvSMP.args_fill(parser)
     parser.add_argument("--cpu-count",            default=2,               help="")
     parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
     parser.add_argument("--trace",                action="store_true",     help="Enable VCD tracing")
@@ -132,6 +132,8 @@ def main():
     parser.add_argument("--trace-end",            default=-1,              help="Cycle to end VCD tracing")
     parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
     args = parser.parse_args()
+
+    VexRiscvSMP.args_read(args)
 
     sim_config = SimConfig(default_clk="sys_clk")
     sim_config.add_module("serial2console", "serial")
