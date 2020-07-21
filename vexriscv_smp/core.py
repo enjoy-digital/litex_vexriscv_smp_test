@@ -3,6 +3,7 @@
 # License: BSD
 
 import os
+from os import path
 
 from migen import *
 
@@ -12,35 +13,12 @@ from litex.soc.cores.cpu import CPU, CPU_GCC_TRIPLE_RISCV32
 
 from litedram.common import LiteDRAMNativePort
 
+import os
+import os.path
+
 
 CPU_VARIANTS = {
-    "1c":         "VexRiscv",
-    "2c":         "VexRiscv",
-    "4c":         "VexRiscv",
-    "8c":         "VexRiscv",
-    "mp1c":       "VexRiscv",
-    "mp2c":       "VexRiscv",
-    "mp4c":       "VexRiscv",
-    "mp8c":       "VexRiscv",
-}
-
-
-GCC_FLAGS = {
-    #                       /-------- Base ISA
-    #                       |/------- Hardware Multiply + Divide
-    #                       ||/----- Atomics
-    #                       |||/---- Compressed ISA
-    #                       ||||/--- Single-Precision Floating-Point
-    #                       |||||/-- Double-Precision Floating-Point
-    #                       imacfd
-    "1c":       "-march=rv32ima     -mabi=ilp32",
-    "2c":       "-march=rv32ima     -mabi=ilp32",
-    "4c":       "-march=rv32ima     -mabi=ilp32",
-    "8c":       "-march=rv32ima     -mabi=ilp32",
-    "mp1c":     "-march=rv32ima     -mabi=ilp32",
-    "mp2c":     "-march=rv32ima     -mabi=ilp32",
-    "mp4c":     "-march=rv32ima     -mabi=ilp32",
-    "mp8c":     "-march=rv32ima     -mabi=ilp32",
+    "default":    "VexRiscv",
 }
 
 class Open(Signal): pass
@@ -55,6 +33,12 @@ class VexRiscvSMP(CPU):
     linker_output_format = "elf32-littleriscv"
     nop                  = "nop"
     io_regions           = {0x80000000: 0x80000000} # origin, length
+    cpu_count = 1
+    coherent_dma= False
+    litedram_data_width = 128
+    dbus_width = 64
+    ibus_width = 64
+
 
     @property
     def mem_map(self):
@@ -68,18 +52,30 @@ class VexRiscvSMP(CPU):
 
     @property
     def gcc_flags(self):
-        flags = GCC_FLAGS[self.variant]
+        flags =  " -march=rv32ima     -mabi=ilp32"
         flags += " -D__vexriscv__"
         flags += " -DUART_POLLING"
         return flags
 
+    def generate_netlist(self):
+        print(f"Generating cluster netlist")
+
+        gen_args = []
+        if(self.coherent_dma) : gen_args.append("--coherent-dma")
+        gen_args.append(f"--cpu-count={self.cpu_count}")
+        gen_args.append(f"--ibus-width={self.ibus_width}")
+        gen_args.append(f"--dbus-width={self.dbus_width}")
+        gen_args.append(f"--litedram-width={self.litedram_data_width}")
+        gen_args.append(f"--netlist-directory={os.path.abspath(os.getcwd())}/verilog")
+        gen_args.append(f"--netlist-name={self.cluster_name}")
+
+        os.system('cd vexriscv_smp/VexRiscv && sbt "runMain vexriscv.demo.smp.VexRiscvLitexSmpClusterCmdGen {args}"'.format(args=" ".join(gen_args)))
+
     def __init__(self, platform, variant):
-        variant  = "2c" if variant == "standard" else variant
-        assert variant in CPU_VARIANTS, "Unsupported variant %s" % variant
         self.platform         = platform
-        self.variant          = variant
+        self.variant          = "variant"
         self.human_name       = self.human_name + "-" + variant.upper()
-        self.cluster_name     = "VexRiscvLitexSmp{mp}Cluster_{n}c".format(mp="Mp" if "mp" in variant else "", n=variant[-2]) # FIXME
+        self.cluster_name     = f"VexRiscvLitexSmpClusterCc{self.cpu_count}Iw{self.ibus_width}Dw{self.dbus_width}Ldw{self.litedram_data_width}{'Cdma' if self.coherent_dma else ''}"
         self.reset            = Signal()
         self.jtag_clk         = Signal()
         self.jtag_enable      = Signal()
@@ -96,6 +92,10 @@ class VexRiscvSMP(CPU):
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
+
+        print(f"VexRiscv cluster : {self.cluster_name}")
+        if not path.exists(f"verilog/{self.cluster_name}.v"):
+            self.generate_netlist()
 
         os.system("cp images/{}.dtb images/dtb".format(variant)) # FIXME: generate dts/dtb dynamically
 
@@ -148,11 +148,7 @@ class VexRiscvSMP(CPU):
             i_plicWishbone_WE       = plicbus.we,
             i_plicWishbone_ADR      = plicbus.adr,
             o_plicWishbone_DAT_MISO = plicbus.dat_r,
-            i_plicWishbone_DAT_MOSI = plicbus.dat_w,
-
-            i_dmaWishbone_CYC       = 0,
-            i_dmaWishbone_STB       = 0,
-
+            i_plicWishbone_DAT_MOSI = plicbus.dat_w
         )
         if "mp" in variant:
             ncpus = int(variant[-2]) # FIXME

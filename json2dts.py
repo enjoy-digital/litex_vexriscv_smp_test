@@ -51,7 +51,7 @@ dts += """
 		timebase-frequency = <{sys_clk_freq}>;
 """.format(sys_clk_freq=d["constants"]["config_clock_frequency"])
 
-cpus = range(int(d["constants"]["config_cpu_human_name"][-2]))
+cpus = range(int(d["constants"]["config_cpu_count"]))
 for cpu in cpus:
 	dts += """
 		cpu@{cpu} {{
