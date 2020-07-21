@@ -57,13 +57,19 @@ class BaseSoC(SoCCore):
     interrupt_map = {
         "reserved":       0,
     }
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_variant="1c", **kwargs):
+    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_count=1, **kwargs):
+        VexRiscvSMP.litedram_width = 128
+        VexRiscvSMP.ibus_width = 64
+        VexRiscvSMP.dbus_width = 64
+        VexRiscvSMP.coherent_dma = False
+
         platform = arty.Platform()
         platform.add_extension(arty._sdcard_pmod_io) # MicroSD PMOD on JB.
 
         # SoCCore ----------------------------------------------------------------------------------
         kwargs["integrated_rom_size"] = 0x10000
-        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant=cpu_variant, **kwargs)
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant="default", **kwargs)
+        self.add_constant("config_cpu_count", cpu_count) # for dts generation
 
         # PLIC ------------------------------------------------------------------------------------
         self.bus.add_slave("plic", self.cpu.plicbus, region=SoCRegion(origin=0xf0C00000, size=0x400000, cached=False))
@@ -116,18 +122,20 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Nexys Video")
+    parser = argparse.ArgumentParser(description="LiteX SoC on Arty")
     parser.add_argument("--build", action="store_true", help="Build bitstream")
     parser.add_argument("--load",  action="store_true", help="Load bitstream")
     builder_args(parser)
     soc_sdram_args(parser)
+    VexRiscvSMP.args_fill(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
-    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SPI Mode)")
+    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SD Mode)")
     args = parser.parse_args()
 
-    soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
+    VexRiscvSMP.args_read(args)
+    soc = BaseSoC(with_ethernet=args.with_ethernet, cpu_count=args.cpu_count, **soc_sdram_argdict(args))
     if args.with_sdcard:
-        soc.add_spi_sdcard()
+        soc.add_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")
     builder.build(run=args.build)
 

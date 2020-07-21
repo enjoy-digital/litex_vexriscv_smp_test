@@ -41,10 +41,11 @@ class VexRiscvSMP(CPU):
 
     @staticmethod
     def args_fill(parser):
+        parser.add_argument("--cpu-count",   default=2,    help="")
         parser.add_argument("--dcache-size", default=8192, help="")
-        parser.add_argument("--dcache-ways", default=2, help="")
+        parser.add_argument("--dcache-ways", default=2,    help="")
         parser.add_argument("--icache-size", default=8192, help="")
-        parser.add_argument("--icache-ways", default=2, help="")
+        parser.add_argument("--icache-ways", default=2,    help="")
 
 
     @staticmethod
@@ -105,12 +106,13 @@ class VexRiscvSMP(CPU):
         self.jtag_tdo         = Signal()
         self.jtag_tdi         = Signal()
         self.interrupt        = Signal(32)
-        self.pbus             = pbus = wishbone.Interface()
-        self.cbus             = cbus = wishbone.Interface()
+        self.pbus             = pbus    = wishbone.Interface()
+        self.cbus             = cbus    = wishbone.Interface()
         self.plicbus          = plicbus = wishbone.Interface()
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
+        self.dma_buses        = []
 
         print(f"VexRiscv cluster : {self.cluster_name}")
         if not path.exists(f"verilog/{self.cluster_name}.v"):
@@ -119,7 +121,6 @@ class VexRiscvSMP(CPU):
         os.system("cp images/{}.dtb images/dtb".format(variant)) # FIXME: generate dts/dtb dynamically
 
         # # #
-
         self.cpu_params = dict(
             # Clk / Rst
             i_debugCd_external_clk           = ClockSignal(),
@@ -169,6 +170,35 @@ class VexRiscvSMP(CPU):
             o_plicWishbone_DAT_MISO = plicbus.dat_r,
             i_plicWishbone_DAT_MOSI = plicbus.dat_w
         )
+
+        if self.coherent_dma:
+            self.dmabus = dmabus = wishbone.Interface(data_width=64)
+            self.dma_buses.append(dmabus)
+
+            dmabus_stall = Signal()
+            dmabus_inhibit = Signal()
+            
+            self.cpu_params.update(dict(
+                i_dma_wishbone_CYC=dmabus.cyc,
+                i_dma_wishbone_STB=dmabus.stb & ~dmabus_inhibit,
+                o_dma_wishbone_ACK=dmabus.ack,
+                i_dma_wishbone_WE=dmabus.we,
+                i_dma_wishbone_ADR=dmabus.adr,
+                o_dma_wishbone_DAT_MISO=dmabus.dat_r,
+                i_dma_wishbone_DAT_MOSI=dmabus.dat_w,
+                o_dma_wishbone_STALL=dmabus_stall
+            ))
+
+            self.sync += [
+                If(dmabus.stb & dmabus.cyc,
+                    If(dmabus.ack,
+                        dmabus_inhibit.eq(0)
+                    ).Else(
+                        dmabus_inhibit.eq(1)
+                    )
+                )
+            ]
+
         if "mp" in variant:
             ncpus = int(variant[-2]) # FIXME
             for n in range(ncpus):

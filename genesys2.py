@@ -118,12 +118,12 @@ def main():
     builder_args(parser)
     soc_sdram_args(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
-    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SPI Mode)")
+    parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SD Mode)")
     args = parser.parse_args()
 
     soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
     if args.with_sdcard:
-        soc.add_spi_sdcard()
+        soc.add_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/genesys2/csr.json")
     builder.build(run=args.build)
 
