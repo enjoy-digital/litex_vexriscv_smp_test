@@ -21,7 +21,7 @@ __attribute__((unused)) static void flush_cpu_icache(void)
 
 __attribute__((unused)) static void flush_cpu_dcache(void)
 {
-
+  asm volatile(".word(0x500F)\n");
 }
 
 void flush_l2_cache(void);
