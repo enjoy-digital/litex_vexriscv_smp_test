@@ -205,12 +205,11 @@ class VexRiscvSMP(CPU):
             self.sync += If(finish_counter == 1024, Finish())
 
             self.sync += [
-                If(dmabus.stb & dmabus.cyc,
-                    If(dmabus.ack,
-                        dmabus_inhibit.eq(0)
-                    ).Else(
-                        dmabus_inhibit.eq(1)
-                    )
+                If(dmabus.stb & dmabus.cyc & ~dmabus_stall,
+                    dmabus_inhibit.eq(1),
+                ),
+                If(dmabus.ack,
+                   dmabus_inhibit.eq(0)
                 )
             ]
 
