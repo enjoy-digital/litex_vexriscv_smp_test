@@ -49,7 +49,7 @@ class Platform(SimPlatform):
 # SoCSMP -------------------------------------------------------------------------------------------
 
 class SoCSMP(SoCCore):
-    def __init__(self, cpu_variant, init_memories=False):
+    def __init__(self, cpu_variant, init_memories=False, with_sdcard=False):
         platform     = Platform()
         sys_clk_freq = int(100e6)
 
@@ -112,12 +112,17 @@ class SoCSMP(SoCCore):
             self.add_constant("MEMTEST_ADDR_SIZE", 4096)
             self.add_constant("MEMTEST_DATA_SIZE", 4096)
 
+        # SDCard -----------------------------------------------------------------------------------
+        if with_sdcard:
+            self.add_sdcard("sdcard", use_emulator=True)
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
     parser.add_argument("--cpu-variant",          default="2c",            help="Select CPU netlist variant")
     parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
+    parser.add_argument("--with-sdcard",          action="store_true",     help="Enable SDCard support")
     parser.add_argument("--trace",                action="store_true",     help="Enable VCD tracing")
     parser.add_argument("--trace-start",          default=0,               help="Cycle to start VCD tracing")
     parser.add_argument("--trace-end",            default=-1,              help="Cycle to end VCD tracing")
@@ -128,7 +133,7 @@ def main():
     sim_config.add_module("serial2console", "serial")
 
     for i in range(2):
-        soc = SoCSMP(args.cpu_variant, args.sdram_init and i!=0)
+        soc = SoCSMP(args.cpu_variant, args.sdram_init and i!=0, args.with_sdcard)
         builder = Builder(soc,
             compile_gateware = i!=0,
             csr_json         = "build/sim/csr.json")
