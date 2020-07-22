@@ -59,9 +59,9 @@ class BaseSoC(SoCCore):
     }
     def __init__(self, sys_clk_freq=int(100e6), cpu_count=1, with_ethernet=False, with_analyzer=False, **kwargs):
         VexRiscvSMP.litedram_width = 128
-        VexRiscvSMP.ibus_width = 64
-        VexRiscvSMP.dbus_width = 64
-        VexRiscvSMP.coherent_dma = True
+        VexRiscvSMP.ibus_width     = 64
+        VexRiscvSMP.dbus_width     = 64
+        VexRiscvSMP.coherent_dma   = True
 
         platform = arty.Platform()
         platform.add_extension(arty._sdcard_pmod_io)   # MicroSD PMOD on JD.
