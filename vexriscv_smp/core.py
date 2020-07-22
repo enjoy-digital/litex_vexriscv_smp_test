@@ -113,7 +113,6 @@ class VexRiscvSMP(CPU):
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
-        self.dma_buses        = [] # Added dynamically
 
         print(f"VexRiscv cluster : {self.cluster_name}")
         if not path.exists(f"verilog/{self.cluster_name}.v"):
@@ -173,30 +172,29 @@ class VexRiscvSMP(CPU):
         )
 
         if self.coherent_dma:
-            self.dmabus = dmabus = wishbone.Interface(data_width=64)
-            self.dma_buses.append(dmabus)
+            self.dma_bus = dma_bus = wishbone.Interface(data_width=64)
 
-            dmabus_stall   = Signal()
-            dmabus_inhibit = Signal()
+            dma_bus_stall   = Signal()
+            dma_bus_inhibit = Signal()
 
             self.cpu_params.update(
-                i_dma_wishbone_CYC      = dmabus.cyc,
-                i_dma_wishbone_STB      = dmabus.stb & ~dmabus_inhibit,
-                o_dma_wishbone_ACK      = dmabus.ack,
-                i_dma_wishbone_WE       = dmabus.we,
-                i_dma_wishbone_SEL      = dmabus.sel,
-                i_dma_wishbone_ADR      = dmabus.adr,
-                o_dma_wishbone_DAT_MISO = dmabus.dat_r,
-                i_dma_wishbone_DAT_MOSI = dmabus.dat_w,
-                o_dma_wishbone_STALL    = dmabus_stall
+                i_dma_wishbone_CYC      = dma_bus.cyc,
+                i_dma_wishbone_STB      = dma_bus.stb & ~dma_bus_inhibit,
+                o_dma_wishbone_ACK      = dma_bus.ack,
+                i_dma_wishbone_WE       = dma_bus.we,
+                i_dma_wishbone_SEL      = dma_bus.sel,
+                i_dma_wishbone_ADR      = dma_bus.adr,
+                o_dma_wishbone_DAT_MISO = dma_bus.dat_r,
+                i_dma_wishbone_DAT_MOSI = dma_bus.dat_w,
+                o_dma_wishbone_STALL    = dma_bus_stall
             )
 
             self.sync += [
-                If(dmabus.stb & dmabus.cyc & ~dmabus_stall,
-                    dmabus_inhibit.eq(1),
+                If(dma_bus.stb & dma_bus.cyc & ~dma_bus_stall,
+                    dma_bus_inhibit.eq(1),
                 ),
-                If(dmabus.ack,
-                   dmabus_inhibit.eq(0)
+                If(dma_bus.ack,
+                   dma_bus_inhibit.eq(0)
                 )
             ]
 
