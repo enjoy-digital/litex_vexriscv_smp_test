@@ -57,14 +57,15 @@ class BaseSoC(SoCCore):
     interrupt_map = {
         "reserved":       0,
     }
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_count=1, **kwargs):
+    def __init__(self, sys_clk_freq=int(100e6), cpu_count=1, with_ethernet=False, with_analyzer=False, **kwargs):
         VexRiscvSMP.litedram_width = 128
         VexRiscvSMP.ibus_width = 64
         VexRiscvSMP.dbus_width = 64
-        VexRiscvSMP.coherent_dma = False
+        VexRiscvSMP.coherent_dma = True
 
         platform = arty.Platform()
-        platform.add_extension(arty._sdcard_pmod_io) # MicroSD PMOD on JB.
+        platform.add_extension(arty._sdcard_pmod_io)   # MicroSD PMOD on JD.
+        platform.add_extension(arty._usb_uart_pmod_io) # USB UART PMOD on JA.
 
         # SoCCore ----------------------------------------------------------------------------------
         kwargs["integrated_rom_size"] = 0x10000
@@ -119,6 +120,17 @@ class BaseSoC(SoCCore):
         self.comb += self.cpu.jtag_tdi.eq(self.jtag.tdi)
         self.comb += self.jtag.tdo.eq(self.cpu.jtag_tdo)
 
+        # Analyzer ---------------------------------------------------------------------------------
+        if with_analyzer:
+            from litescope import LiteScopeAnalyzer
+            self.add_uartbone("usb_uart")
+            analyzer_signals = [self.cpu.dma_buses[0]]
+            self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
+                depth        = 512,
+                clock_domain = "sys",
+                csr_csv      = "analyzer.csv")
+            self.add_csr("analyzer")
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
@@ -130,10 +142,15 @@ def main():
     VexRiscvSMP.args_fill(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
     parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SD Mode)")
+    parser.add_argument("--with-analyzer", action="store_true", help="Enable Analyzer")
     args = parser.parse_args()
 
     VexRiscvSMP.args_read(args)
-    soc = BaseSoC(with_ethernet=args.with_ethernet, cpu_count=args.cpu_count, **soc_sdram_argdict(args))
+    soc = BaseSoC(
+        cpu_count     = args.cpu_count,
+        with_ethernet = args.with_ethernet,
+        with_analyzer = args.with_analyzer,
+        **soc_sdram_argdict(args))
     if args.with_sdcard:
         soc.add_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")
