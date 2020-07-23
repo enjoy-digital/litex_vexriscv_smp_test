@@ -39,6 +39,7 @@ class VexRiscvSMP(CPU):
     litedram_width = 128
     dbus_width     = 64
     ibus_width     = 64
+    netlist_directory = f"{os.path.abspath(os.getcwd())}/verilog"
 
     @staticmethod
     def args_fill(parser):
@@ -74,21 +75,49 @@ class VexRiscvSMP(CPU):
         flags += " -DUART_POLLING"
         return flags
 
-    def generate_netlist(self):
+    @staticmethod
+    def generate_cluster_name():
+        VexRiscvSMP.cluster_name     = f"VexRiscvLitexSmpCluster_Cc{VexRiscvSMP.cpu_count}_Iw{VexRiscvSMP.ibus_width}Is{VexRiscvSMP.icache_size}Iy{VexRiscvSMP.icache_ways}_Dw{VexRiscvSMP.dbus_width}Ds{VexRiscvSMP.dcache_size}Dy{VexRiscvSMP.dcache_ways}_Ldw{VexRiscvSMP.litedram_width}{'_Cdma' if VexRiscvSMP.coherent_dma else ''}"
+
+    @staticmethod
+    def generate_default_configs():
+        VexRiscvSMP.ibus_width     = 64
+        VexRiscvSMP.dbus_width     = 64
+        VexRiscvSMP.dcache_size    = 8192
+        VexRiscvSMP.icache_size    = 8192
+        VexRiscvSMP.dcache_ways    = 2
+        VexRiscvSMP.icache_ways    = 2
+        VexRiscvSMP.litedram_width = 128
+
+        VexRiscvSMP.coherent_dma   = True
+        for core_count in [1,2,4]:
+            VexRiscvSMP.cpu_count      = core_count
+            VexRiscvSMP.generate_cluster_name()
+            VexRiscvSMP.generate_netlist()
+
+        VexRiscvSMP.coherent_dma   = False
+        for core_count in [1]:
+            VexRiscvSMP.cpu_count      = core_count
+            VexRiscvSMP.generate_cluster_name()
+            VexRiscvSMP.generate_netlist()
+
+
+    @staticmethod
+    def generate_netlist():
         print(f"Generating cluster netlist")
 
         gen_args = []
-        if(self.coherent_dma) : gen_args.append("--coherent-dma")
-        gen_args.append(f"--cpu-count={self.cpu_count}")
-        gen_args.append(f"--ibus-width={self.ibus_width}")
-        gen_args.append(f"--dbus-width={self.dbus_width}")
-        gen_args.append(f"--dcache-size={self.dcache_size}")
-        gen_args.append(f"--icache-size={self.icache_size}")
-        gen_args.append(f"--dcache-ways={self.dcache_ways}")
-        gen_args.append(f"--icache-ways={self.icache_ways}")
-        gen_args.append(f"--litedram-width={self.litedram_width}")
-        gen_args.append(f"--netlist-directory={os.path.abspath(os.getcwd())}/verilog")
-        gen_args.append(f"--netlist-name={self.cluster_name}")
+        if(VexRiscvSMP.coherent_dma) : gen_args.append("--coherent-dma")
+        gen_args.append(f"--cpu-count={VexRiscvSMP.cpu_count}")
+        gen_args.append(f"--ibus-width={VexRiscvSMP.ibus_width}")
+        gen_args.append(f"--dbus-width={VexRiscvSMP.dbus_width}")
+        gen_args.append(f"--dcache-size={VexRiscvSMP.dcache_size}")
+        gen_args.append(f"--icache-size={VexRiscvSMP.icache_size}")
+        gen_args.append(f"--dcache-ways={VexRiscvSMP.dcache_ways}")
+        gen_args.append(f"--icache-ways={VexRiscvSMP.icache_ways}")
+        gen_args.append(f"--litedram-width={VexRiscvSMP.litedram_width}")
+        gen_args.append(f"--netlist-name={VexRiscvSMP.cluster_name}")
+        gen_args.append(f"--netlist-directory={VexRiscvSMP.netlist_directory}")
 
         os.system('cd vexriscv_smp/VexRiscv && sbt "runMain vexriscv.demo.smp.VexRiscvLitexSmpClusterCmdGen {args}"'.format(args=" ".join(gen_args)))
 
@@ -96,7 +125,6 @@ class VexRiscvSMP(CPU):
         self.platform         = platform
         self.variant          = "variant"
         self.human_name       = self.human_name + "-" + variant.upper()
-        self.cluster_name     = f"VexRiscvLitexSmpCluster_Cc{self.cpu_count}_Iw{self.ibus_width}Is{self.icache_size}Iy{self.icache_ways}_Dw{self.dbus_width}Ds{self.dcache_size}Dy{self.dcache_ways}_Ldw{self.litedram_width}{'_Cdma' if self.coherent_dma else ''}"
         self.reset            = Signal()
         self.jtag_clk         = Signal()
         self.jtag_enable      = Signal()
@@ -114,6 +142,7 @@ class VexRiscvSMP(CPU):
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
 
+        VexRiscvSMP.generate_cluster_name()
         print(f"VexRiscv cluster : {self.cluster_name}")
         if not path.exists(f"verilog/{self.cluster_name}.v"):
             self.generate_netlist()
