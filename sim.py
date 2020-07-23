@@ -122,7 +122,6 @@ class SoCSMP(SoCCore):
         # SDCard -----------------------------------------------------------------------------------
         if with_sdcard:
             self.add_sdcard("sdcard", use_emulator=True)
-            self.add_constant("SDCARD_DEBUG")
 
 # Build --------------------------------------------------------------------------------------------
 
