@@ -57,13 +57,20 @@ class BaseSoC(SoCCore):
     interrupt_map = {
         "reserved":       0,
     }
-    def __init__(self, sys_clk_freq=int(100e6), with_ethernet=False, cpu_variant="1c", **kwargs):
+    def __init__(self, sys_clk_freq=int(100e6), cpu_count=1, with_ethernet=False, with_analyzer=False, **kwargs):
+        VexRiscvSMP.litedram_width = 128
+        VexRiscvSMP.ibus_width     = 64
+        VexRiscvSMP.dbus_width     = 64
+        VexRiscvSMP.coherent_dma   = True
+
         platform = arty.Platform()
-        platform.add_extension(arty._sdcard_pmod_io) # MicroSD PMOD on JB.
+        platform.add_extension(arty._sdcard_pmod_io)   # MicroSD PMOD on JD.
+        platform.add_extension(arty._usb_uart_pmod_io) # USB UART PMOD on JA.
 
         # SoCCore ----------------------------------------------------------------------------------
         kwargs["integrated_rom_size"] = 0x10000
-        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant=cpu_variant, **kwargs)
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant="default", **kwargs)
+        self.add_constant("config_cpu_count", cpu_count) # for dts generation
 
         # PLIC ------------------------------------------------------------------------------------
         self.bus.add_slave("plic", self.cpu.plicbus, region=SoCRegion(origin=0xf0C00000, size=0x400000, cached=False))
@@ -113,6 +120,17 @@ class BaseSoC(SoCCore):
         self.comb += self.cpu.jtag_tdi.eq(self.jtag.tdi)
         self.comb += self.jtag.tdo.eq(self.cpu.jtag_tdo)
 
+        # Analyzer ---------------------------------------------------------------------------------
+        if with_analyzer:
+            from litescope import LiteScopeAnalyzer
+            self.add_uartbone("usb_uart")
+            analyzer_signals = [self.cpu.dma_buses[0]]
+            self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
+                depth        = 512,
+                clock_domain = "sys",
+                csr_csv      = "analyzer.csv")
+            self.add_csr("analyzer")
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
@@ -121,11 +139,18 @@ def main():
     parser.add_argument("--load",  action="store_true", help="Load bitstream")
     builder_args(parser)
     soc_sdram_args(parser)
+    VexRiscvSMP.args_fill(parser)
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support")
     parser.add_argument("--with-sdcard",   action="store_true", help="Enable SDCard support (SD Mode)")
+    parser.add_argument("--with-analyzer", action="store_true", help="Enable Analyzer")
     args = parser.parse_args()
 
-    soc = BaseSoC(with_ethernet=args.with_ethernet, **soc_sdram_argdict(args))
+    VexRiscvSMP.args_read(args)
+    soc = BaseSoC(
+        cpu_count     = args.cpu_count,
+        with_ethernet = args.with_ethernet,
+        with_analyzer = args.with_analyzer,
+        **soc_sdram_argdict(args))
     if args.with_sdcard:
         soc.add_sdcard()
     builder = Builder(soc, compile_software=args.build, csr_json="build/arty/csr.json")

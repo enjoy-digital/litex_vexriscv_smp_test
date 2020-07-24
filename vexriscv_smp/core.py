@@ -3,6 +3,7 @@
 # License: BSD
 
 import os
+from os import path
 
 from migen import *
 
@@ -12,35 +13,12 @@ from litex.soc.cores.cpu import CPU, CPU_GCC_TRIPLE_RISCV32
 
 from litedram.common import LiteDRAMNativePort
 
+import os
+import os.path
+
 
 CPU_VARIANTS = {
-    "1c":         "VexRiscv",
-    "2c":         "VexRiscv",
-    "4c":         "VexRiscv",
-    "8c":         "VexRiscv",
-    "mp1c":       "VexRiscv",
-    "mp2c":       "VexRiscv",
-    "mp4c":       "VexRiscv",
-    "mp8c":       "VexRiscv",
-}
-
-
-GCC_FLAGS = {
-    #                       /-------- Base ISA
-    #                       |/------- Hardware Multiply + Divide
-    #                       ||/----- Atomics
-    #                       |||/---- Compressed ISA
-    #                       ||||/--- Single-Precision Floating-Point
-    #                       |||||/-- Double-Precision Floating-Point
-    #                       imacfd
-    "1c":       "-march=rv32ima     -mabi=ilp32",
-    "2c":       "-march=rv32ima     -mabi=ilp32",
-    "4c":       "-march=rv32ima     -mabi=ilp32",
-    "8c":       "-march=rv32ima     -mabi=ilp32",
-    "mp1c":     "-march=rv32ima     -mabi=ilp32",
-    "mp2c":     "-march=rv32ima     -mabi=ilp32",
-    "mp4c":     "-march=rv32ima     -mabi=ilp32",
-    "mp8c":     "-march=rv32ima     -mabi=ilp32",
+    "default":    "VexRiscv",
 }
 
 class Open(Signal): pass
@@ -56,6 +34,30 @@ class VexRiscvSMP(CPU):
     nop                  = "nop"
     io_regions           = {0x80000000: 0x80000000} # origin, length
 
+    cpu_count      = 1
+    coherent_dma   = False
+    litedram_width = 128
+    dbus_width     = 64
+    ibus_width     = 64
+    netlist_directory = f"{os.path.abspath(os.getcwd())}/verilog"
+
+    @staticmethod
+    def args_fill(parser):
+        parser.add_argument("--cpu-count",   default=2,    help="")
+        parser.add_argument("--dcache-size", default=8192, help="")
+        parser.add_argument("--dcache-ways", default=2,    help="")
+        parser.add_argument("--icache-size", default=8192, help="")
+        parser.add_argument("--icache-ways", default=2,    help="")
+
+
+    @staticmethod
+    def args_read(args):
+        VexRiscvSMP.cpu_count   = args.cpu_count
+        VexRiscvSMP.dcache_size = args.dcache_size
+        VexRiscvSMP.icache_size = args.icache_size
+        VexRiscvSMP.dcache_ways = args.dcache_ways
+        VexRiscvSMP.icache_ways = args.icache_ways
+
     @property
     def mem_map(self):
         return {
@@ -68,18 +70,61 @@ class VexRiscvSMP(CPU):
 
     @property
     def gcc_flags(self):
-        flags = GCC_FLAGS[self.variant]
+        flags =  " -march=rv32ima     -mabi=ilp32"
         flags += " -D__vexriscv__"
         flags += " -DUART_POLLING"
         return flags
 
+    @staticmethod
+    def generate_cluster_name():
+        VexRiscvSMP.cluster_name     = f"VexRiscvLitexSmpCluster_Cc{VexRiscvSMP.cpu_count}_Iw{VexRiscvSMP.ibus_width}Is{VexRiscvSMP.icache_size}Iy{VexRiscvSMP.icache_ways}_Dw{VexRiscvSMP.dbus_width}Ds{VexRiscvSMP.dcache_size}Dy{VexRiscvSMP.dcache_ways}_Ldw{VexRiscvSMP.litedram_width}{'_Cdma' if VexRiscvSMP.coherent_dma else ''}"
+
+    @staticmethod
+    def generate_default_configs():
+        VexRiscvSMP.ibus_width     = 64
+        VexRiscvSMP.dbus_width     = 64
+        VexRiscvSMP.dcache_size    = 8192
+        VexRiscvSMP.icache_size    = 8192
+        VexRiscvSMP.dcache_ways    = 2
+        VexRiscvSMP.icache_ways    = 2
+        VexRiscvSMP.litedram_width = 128
+
+        VexRiscvSMP.coherent_dma   = True
+        for core_count in [1,2,4]:
+            VexRiscvSMP.cpu_count      = core_count
+            VexRiscvSMP.generate_cluster_name()
+            VexRiscvSMP.generate_netlist()
+
+        VexRiscvSMP.coherent_dma   = False
+        for core_count in [1]:
+            VexRiscvSMP.cpu_count      = core_count
+            VexRiscvSMP.generate_cluster_name()
+            VexRiscvSMP.generate_netlist()
+
+
+    @staticmethod
+    def generate_netlist():
+        print(f"Generating cluster netlist")
+
+        gen_args = []
+        if(VexRiscvSMP.coherent_dma) : gen_args.append("--coherent-dma")
+        gen_args.append(f"--cpu-count={VexRiscvSMP.cpu_count}")
+        gen_args.append(f"--ibus-width={VexRiscvSMP.ibus_width}")
+        gen_args.append(f"--dbus-width={VexRiscvSMP.dbus_width}")
+        gen_args.append(f"--dcache-size={VexRiscvSMP.dcache_size}")
+        gen_args.append(f"--icache-size={VexRiscvSMP.icache_size}")
+        gen_args.append(f"--dcache-ways={VexRiscvSMP.dcache_ways}")
+        gen_args.append(f"--icache-ways={VexRiscvSMP.icache_ways}")
+        gen_args.append(f"--litedram-width={VexRiscvSMP.litedram_width}")
+        gen_args.append(f"--netlist-name={VexRiscvSMP.cluster_name}")
+        gen_args.append(f"--netlist-directory={VexRiscvSMP.netlist_directory}")
+
+        os.system('cd vexriscv_smp/VexRiscv && sbt "runMain vexriscv.demo.smp.VexRiscvLitexSmpClusterCmdGen {args}"'.format(args=" ".join(gen_args)))
+
     def __init__(self, platform, variant):
-        variant  = "2c" if variant == "standard" else variant
-        assert variant in CPU_VARIANTS, "Unsupported variant %s" % variant
         self.platform         = platform
-        self.variant          = variant
+        self.variant          = "variant"
         self.human_name       = self.human_name + "-" + variant.upper()
-        self.cluster_name     = "VexRiscvLitexSmp{mp}Cluster_{n}c".format(mp="Mp" if "mp" in variant else "", n=variant[-2]) # FIXME
         self.reset            = Signal()
         self.jtag_clk         = Signal()
         self.jtag_enable      = Signal()
@@ -93,49 +138,48 @@ class VexRiscvSMP(CPU):
         self.pbus             = pbus    = wishbone.Interface()
         self.cbus             = cbus    = wishbone.Interface()
         self.plicbus          = plicbus = wishbone.Interface()
-        self.dmabus           = dmabus  = wishbone.Interface(data_width=64)
 
         self.periph_buses     = [pbus]
         self.memory_buses     = [] # Added dynamically
-        self.dma_buses        = [dmabus]
+
+        VexRiscvSMP.generate_cluster_name()
+        print(f"VexRiscv cluster : {self.cluster_name}")
+        if not path.exists(f"verilog/{self.cluster_name}.v"):
+            self.generate_netlist()
 
         os.system("cp images/{}.dtb images/dtb".format(variant)) # FIXME: generate dts/dtb dynamically
 
         # # #
-
-        dmabus_stall   = Signal()
-        dmabus_inhibit = Signal()
-
         self.cpu_params = dict(
             # Clk / Rst
-            i_debugCd_external_clk           = ClockSignal(),
-            i_debugCd_external_reset         = ResetSignal() | self.reset,
+            i_debugCd_external_clk   = ClockSignal(),
+            i_debugCd_external_reset = ResetSignal() | self.reset,
 
             # Interrupts
-            i_interrupts        = self.interrupt,
+            i_interrupts             = self.interrupt,
 
             # JTAG
-            i_jtag_clk          = self.jtag_clk,
-            i_debugPort_enable  = self.jtag_enable,
-            i_debugPort_capture = self.jtag_capture,
-            i_debugPort_shift   = self.jtag_shift,
-            i_debugPort_update  = self.jtag_update,
-            i_debugPort_reset   = self.jtag_reset,
-            i_debugPort_tdi     = self.jtag_tdi,
-            o_debugPort_tdo     = self.jtag_tdo,
+            i_jtag_clk               = self.jtag_clk,
+            i_debugPort_enable       = self.jtag_enable,
+            i_debugPort_capture      = self.jtag_capture,
+            i_debugPort_shift        = self.jtag_shift,
+            i_debugPort_update       = self.jtag_update,
+            i_debugPort_reset        = self.jtag_reset,
+            i_debugPort_tdi          = self.jtag_tdi,
+            o_debugPort_tdo          = self.jtag_tdo,
 
             # Peripheral Bus (Master)
-            o_peripheral_CYC      = pbus.cyc,
-            o_peripheral_STB      = pbus.stb,
-            i_peripheral_ACK      = pbus.ack,
-            o_peripheral_WE       = pbus.we,
-            o_peripheral_ADR      = pbus.adr,
-            i_peripheral_DAT_MISO = pbus.dat_r,
-            o_peripheral_DAT_MOSI = pbus.dat_w,
-            o_peripheral_SEL      = pbus.sel,
-            i_peripheral_ERR      = pbus.err,
-            o_peripheral_CTI      = pbus.cti,
-            o_peripheral_BTE      = pbus.bte,
+            o_peripheral_CYC         = pbus.cyc,
+            o_peripheral_STB         = pbus.stb,
+            i_peripheral_ACK         = pbus.ack,
+            o_peripheral_WE          = pbus.we,
+            o_peripheral_ADR         = pbus.adr,
+            i_peripheral_DAT_MISO    = pbus.dat_r,
+            o_peripheral_DAT_MOSI    = pbus.dat_w,
+            o_peripheral_SEL         = pbus.sel,
+            i_peripheral_ERR         = pbus.err,
+            o_peripheral_CTI         = pbus.cti,
+            o_peripheral_BTE         = pbus.bte,
 
             # CLINT Bus (Slave)
             i_clintWishbone_CYC      = cbus.cyc,
@@ -147,32 +191,41 @@ class VexRiscvSMP(CPU):
             i_clintWishbone_DAT_MOSI = cbus.dat_w,
 
             # PLIC Bus (Slave)
-            i_plicWishbone_CYC      = plicbus.cyc,
-            i_plicWishbone_STB      = plicbus.stb,
-            o_plicWishbone_ACK      = plicbus.ack,
-            i_plicWishbone_WE       = plicbus.we,
-            i_plicWishbone_ADR      = plicbus.adr,
-            o_plicWishbone_DAT_MISO = plicbus.dat_r,
-            i_plicWishbone_DAT_MOSI = plicbus.dat_w,
-
-            i_dmaWishbone_CYC       = dmabus.cyc,
-            i_dmaWishbone_STB       = dmabus.stb & ~dmabus_inhibit,
-            o_dmaWishbone_ACK       = dmabus.ack,
-            i_dmaWishbone_WE        = dmabus.we,
-            i_dmaWishbone_ADR       = dmabus.adr,
-            o_dmaWishbone_DAT_MISO  = dmabus.dat_r,
-            i_dmaWishbone_DAT_MOSI  = dmabus.dat_w,
-            o_dmaWishbone_STALL     = dmabus_stall,
+            i_plicWishbone_CYC       = plicbus.cyc,
+            i_plicWishbone_STB       = plicbus.stb,
+            o_plicWishbone_ACK       = plicbus.ack,
+            i_plicWishbone_WE        = plicbus.we,
+            i_plicWishbone_ADR       = plicbus.adr,
+            o_plicWishbone_DAT_MISO  = plicbus.dat_r,
+            i_plicWishbone_DAT_MOSI  = plicbus.dat_w
         )
-        self.sync += [
-            If(dmabus.stb & dmabus.cyc,
-                If(dmabus.ack,
-                    dmabus_inhibit.eq(0)
-                ).Else(
-                    dmabus_inhibit.eq(1)
-                )
+
+        if self.coherent_dma:
+            self.dma_bus = dma_bus = wishbone.Interface(data_width=64)
+
+            dma_bus_stall   = Signal()
+            dma_bus_inhibit = Signal()
+
+            self.cpu_params.update(
+                i_dma_wishbone_CYC      = dma_bus.cyc,
+                i_dma_wishbone_STB      = dma_bus.stb & ~dma_bus_inhibit,
+                o_dma_wishbone_ACK      = dma_bus.ack,
+                i_dma_wishbone_WE       = dma_bus.we,
+                i_dma_wishbone_SEL      = dma_bus.sel,
+                i_dma_wishbone_ADR      = dma_bus.adr,
+                o_dma_wishbone_DAT_MISO = dma_bus.dat_r,
+                i_dma_wishbone_DAT_MOSI = dma_bus.dat_w,
+                o_dma_wishbone_STALL    = dma_bus_stall
             )
-        ]
+
+            self.sync += [
+                If(dma_bus.stb & dma_bus.cyc & ~dma_bus_stall,
+                    dma_bus_inhibit.eq(1),
+                ),
+                If(dma_bus.ack,
+                   dma_bus_inhibit.eq(0)
+                )
+            ]
 
         if "mp" in variant:
             ncpus = int(variant[-2]) # FIXME

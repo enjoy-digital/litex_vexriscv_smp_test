@@ -3,10 +3,10 @@
 1. Install LiteX: https://github.com/enjoy-digital/litex/wiki/Installation
 
 2. Run the simulation:
-  ./sim.py  --cpu-variant 4c (suported: 1c, 2c, 4c, 8c)
+  ./sim.py --core-count=2
   add --sdram-init to load the images
   add --trace to enable waveform that will be located in build/sim/gateware/sim.vcd
 
 3. Test on Hardware (Arty A7 or Nexys Video):
-  ./target.py --cpu-variant (suported: 1c, 2c, 4c, 8c) --uart-baudrate=1000000 --build --load
+  ./target.py --core-count=2 --uart-baudrate=1000000 --build --load
   lxterm --images=images.json /dev/ttyUSBX --speed=1000000 --no-crc

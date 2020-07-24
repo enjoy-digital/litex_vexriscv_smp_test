@@ -1,0 +1,6 @@
+[submodule "vexriscv_smp/VexRiscv"]
+	path = vexriscv_smp/VexRiscv
+	url = https://github.com/SpinalHDL/VexRiscv.git
+[submodule "vexriscv_smp/SpinalHDL"]
+	path = vexriscv_smp/SpinalHDL
+	url = https://github.com/SpinalHDL/SpinalHDL.git

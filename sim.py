@@ -25,7 +25,6 @@ from litex.tools.litex_sim import get_sdram_phy_settings
 from vexriscv_smp import VexRiscvSMP
 
 # IOs ----------------------------------------------------------------------------------------------
-
 _io = [
     ("sys_clk", 0, Pins(1)),
     ("sys_rst", 0, Pins(1)),
@@ -49,9 +48,16 @@ class Platform(SimPlatform):
 # SoCSMP -------------------------------------------------------------------------------------------
 
 class SoCSMP(SoCCore):
-    def __init__(self, cpu_variant, init_memories=False, with_sdcard=False):
+    def __init__(self, cpu_count, init_memories=False, with_sdcard=False):
+        # Cluster configs ---------------------------------------------------------------------
+        VexRiscvSMP.litedram_width = 128
+        VexRiscvSMP.ibus_width = 64
+        VexRiscvSMP.dbus_width = 64
+        VexRiscvSMP.coherent_dma = with_sdcard
+
+        # -------------------------------------------------------------------------------------------
         platform     = Platform()
-        sys_clk_freq = int(100e6)
+        sys_clk_freq = int(1e6)
 
         sdram_init = []
         if init_memories:
@@ -64,12 +70,13 @@ class SoCSMP(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq,
-            cpu_type                 = "vexriscv", cpu_variant=cpu_variant, cpu_cls=VexRiscvSMP,
+            cpu_type                 = "vexriscv", cpu_variant="default", cpu_cls=VexRiscvSMP,
             uart_name                = "sim",
-            integrated_rom_size      = 0x8000,
+            integrated_rom_size      = 0x10000,
             integrated_main_ram_size = 0x00000000)
         self.platform.name = "sim"
         self.add_constant("SIM")
+        self.add_constant("config_cpu_count", cpu_count) # for dts generation
 
         # PLIC ------------------------------------------------------------------------------------
         self.bus.add_slave("plic", self.cpu.plicbus, region=SoCRegion(origin=0xf0C00000, size=0x400000, cached=False))
@@ -120,7 +127,8 @@ class SoCSMP(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="Linux on LiteX-VexRiscv Simulation")
-    parser.add_argument("--cpu-variant",          default="2c",            help="Select CPU netlist variant")
+
+    VexRiscvSMP.args_fill(parser)
     parser.add_argument("--sdram-init",           action="store_true",     help="Init SDRAM with Linux images")
     parser.add_argument("--with-sdcard",          action="store_true",     help="Enable SDCard support")
     parser.add_argument("--trace",                action="store_true",     help="Enable VCD tracing")
@@ -129,11 +137,14 @@ def main():
     parser.add_argument("--opt-level",            default="O3",            help="Compilation optimization level")
     args = parser.parse_args()
 
+    VexRiscvSMP.args_read(args)
+
     sim_config = SimConfig(default_clk="sys_clk")
     sim_config.add_module("serial2console", "serial")
 
     for i in range(2):
-        soc = SoCSMP(args.cpu_variant, args.sdram_init and i!=0, args.with_sdcard)
+        soc = SoCSMP(args.cpu_count, args.sdram_init and i!=0, args.with_sdcard)
+
         builder = Builder(soc,
             compile_gateware = i!=0,
             csr_json         = "build/sim/csr.json")
@@ -143,7 +154,7 @@ def main():
             trace       = args.trace,
             trace_start = int(args.trace_start),
             trace_end   = int(args.trace_end),
-            trace_fst   = 1)
+            trace_fst   = args.trace)
         os.chdir("../")
         if i == 0:
             os.system("./json2dts.py build/sim/csr.json > build/sim/dts") # FIXME
