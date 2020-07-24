@@ -3,10 +3,17 @@
 1. Install LiteX: https://github.com/enjoy-digital/litex/wiki/Installation
 
 2. Run the simulation:
-  ./sim.py --core-count=2
+  ./sim.py --cpu-count=1
   add --sdram-init to load the images
   add --trace to enable waveform that will be located in build/sim/gateware/sim.vcd
 
 3. Test on Hardware (Arty A7 or Nexys Video):
-  ./target.py --core-count=2 --uart-baudrate=1000000 --build --load
-  lxterm --images=images.json /dev/ttyUSBX --speed=1000000 --no-crc
+  ./target.py --cpu-count=1 --with-ethernet --with-sdcard --build --load
+  Copy the contents of images directory to a Fat SDCard and insert it in the board's slot.
+  Run lxterm:
+  lxterm /dev/ttyUSBX
+
+  For development, it's also possible to load the images from the UART:
+  add --uart-baudrate=3e6 to the target's arguments.
+  run lxterm with:
+  lxterm /dev/ttyUSBX --speed=3e6 --images=images.json --no-crc
