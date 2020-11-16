@@ -99,6 +99,7 @@ class BaseSoC(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         kwargs["integrated_rom_size"] = 0x10000
+        kwargs["csr_data_width"]      = 8
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, cpu_cls=VexRiscvSMP, cpu_variant="default", **kwargs)
         self.add_constant("config_cpu_count", cpu_count) # for dts generation
 
